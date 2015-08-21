@@ -1,0 +1,31 @@
+{
+  "name": "Skeleton-Less",
+  "homepage": "https://github.com/whatsnewsaes/Skeleton-Less",
+  "authors": [
+    "Seth Coelen <scoelen89@gmail.com> (http://SethCoelen.com)"
+  ],
+  "description": "The (un)official Less Version of Skeleton (2.0.4): A Dead Simple, Responsive Boilerplate for Mobile-Friendly Development",
+  "main": "less/skeleton.less",
+  "keywords": [
+    "skeleton",
+    "less",
+    "responsive",
+    "boilerplate"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components"
+  ],
+  "_release": "9e154285db",
+  "_resolution": {
+    "type": "branch",
+    "branch": "master",
+    "commit": "9e154285db85889f9685e8c24f1946b4247d25c7"
+  },
+  "_source": "git://github.com/whatsnewsaes/Skeleton-Less.git",
+  "_target": "*",
+  "_originalSource": "skeleton-less",
+  "_direct": true
+}
