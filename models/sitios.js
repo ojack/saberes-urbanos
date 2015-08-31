@@ -5,21 +5,31 @@ config = require('./../config');;
 //https://www.npmjs.com/package/mongoose-attachments
 
 var SitioSchema = new mongoose.Schema({
-	barrio: String,
-	localidad: String,
-	respuesta: String,
-	porque: String,
-	existente: Boolean,
-	coords: {
-	    type: [Number],  // [<longitude>, <latitude>]
-	    index: '2d'      // create the geospatial index
+	properties: {
+		barrio: String,
+		localidad: String,
+		respuesta: String,
+		porque: String,
+		existente: Boolean,
+		 fotoUrl: String,
+	    sonidoUrl: String,
+	    videoUrl: String,
+	    created:  {type: Date, default: Date.now},
+	    categoria: String
+	},
+	geometry: {
+		'type': { type: String, default: "Point" },
+		coordinates : [
+			 {type: "Number"} // [<longitude>, <latitude>]
+	    	  // create the geospatial index
+		]
     },
-    fotoUrl: String,
-    sonidoUrl: String,
-    videoUrl: String,
-    visible: Boolean,
-    created:  {type: Date, default: Date.now}
+   
+    visible: Boolean
+    
 });
+
+SitioSchema.index({ created: -1});
 
 SitioSchema.plugin(crate, {
   storage: new LocalFS({
@@ -31,5 +41,6 @@ SitioSchema.plugin(crate, {
   }
 })
 
+//TODO for production animalSchema.set('autoIndex', false);
 
  module.exports = mongoose.model('Sitio', SitioSchema);

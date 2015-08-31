@@ -2,7 +2,9 @@ import React from 'react';
 import Formsy from 'formsy-react';
 import FRC from 'formsy-react-components';
 import MapLocator from './MapLocator';
-import request from 'superagent'
+import request from 'superagent';
+import FormsyInput from './FormsyInput';
+import MultipleDropdown from './MultipleDropdown';
 
 var Checkbox = FRC.Checkbox;
 var CheckboxGroup = FRC.CheckboxGroup;
@@ -14,14 +16,19 @@ var File = FRC.File;
 var Textarea = FRC.Textarea;
 
 var AddSite = React.createClass({
-
-    resetForm: function() {
+    getInitialState(){
+        return {direccion: this.props.data.direccion}
+    },
+    resetForm() {
         this.refs.form.reset();
     },
-
+    updateDireccion(val){
+        //console.log("updating direccion state");
+        this.setState({direccion: val});
+        //console.log(this.state);
+    },
     submitForm: function(data) {
-        console.log("hey");
-        console.log(data);
+        //console.log(this.data);
        var r = request.post('api/upload');
        for(var key in data){
         if(data[key] != undefined && data[key] != null){
@@ -29,7 +36,7 @@ var AddSite = React.createClass({
             //attach files
             if(key == 'foto' || key == 'sonido'){
                 if(data[key].length > 0){
-                    console.log(data[key][0]);
+                    //console.log(data[key][0]);
                     r.attach(key, data.foto[0]);
                 }
 
@@ -43,15 +50,15 @@ var AddSite = React.createClass({
                 r.field(key, data[key]);
             }
         }
-       // console.log(key + " " + typeof(data[key]));
+       // //console.log(key + " " + typeof(data[key]));
         }
-            console.log(data.coords);
+            //console.log(data.coords);
            // r.send(data);
          r.end(function(err, res){
              if (res.ok) {
-               console.log('yay got ' + JSON.stringify(res.body));
+               //console.log('yay got ' + JSON.stringify(res.body));
              } else {
-                console.log('Oh no! error ' + res.text);
+                //console.log('Oh no! error ' + res.text);
              }
         });
     },
@@ -87,6 +94,7 @@ var AddSite = React.createClass({
                 </div>
              
                 <Formsy.Form className={formClassName} onSubmit={this.submitForm} ref="form">
+
                     <fieldset>
                         <Input
                             {...sharedProps}
@@ -127,11 +135,19 @@ var AddSite = React.createClass({
                             value={this.props.data.barrio}
                             label="Barrio"
                         />
-                         <Input
+                         <FormsyInput
                             {...sharedProps}
                             name="direccion"
                             value={this.props.data.direccion}
-                            label="Dirrección"
+                            updateParent={this.updateDireccion}
+                            label="Dirección"
+                        />
+                         <MultipleDropdown
+                            {...sharedProps}
+                            name="categoria"
+                            value={this.props.data.direccion}
+                            updateParent={this.updateDireccion}
+                            label="Categoría"
                         />
                          <MapLocator 
                              {...sharedProps}
@@ -139,6 +155,8 @@ var AddSite = React.createClass({
                             cols={40}
                             name="coords"
                             value={this.props.data.coords}
+                            direccion={this.state.direccion}
+                            label="Ubique el sitio en el mapa de Bogotá"
                         />
                         
                          <File

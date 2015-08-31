@@ -1,0 +1,99 @@
+[
+	{
+		"name": "monumental",
+		"children":  [
+			{"name": "mural"}, 
+			{"name": "commemoración"}, 
+			{"name": "evento religioso"}, 
+			{"name": "cementerio"}, 
+			{"name": "fantasma"}, 
+			{"name": "escultura"}, 
+			{"name": "personaje ilustre"}, 
+			{"name": "plaza"},
+			{"name": "escultura"}
+		]
+	},
+	{
+		"name": "esparcimiento y cultura",
+		"children": [
+			{"name": "espectáculo"}, 
+			{"name": "bar"}, 
+			{"name": "bazar"}, 
+			{"name": "festival"}, 
+			{"name": "club"}, 
+			{"name": "discoteca"}, 
+			{"name":  "sala de concierto"}, 
+			{"name":  "museo"}, 
+			{"name":  "biblioteca"}, 
+			{"name":  "teatro"}, 
+			{"name":  "cine"}, 
+			{"name":  "café"}, 
+			{"name":  "centro cultural"}, 
+			{"name":  "chichería"}
+		]
+	},
+	{
+		"name": "arquitectónico",
+		"children":[
+			{"name": "técnica constructiva"}, 
+			{"name": "conjunto cerrado"}, 
+			{"name": "clínica"}, 
+			{"name": "iglesia"}, 
+			{"name": "barrio"}, 
+			{"name": "asilo"}, 
+			{"name": "hospital"}, 
+			{"name": "vivienda"}
+		]
+	},
+	{
+		"name": "industrial",
+		"children":[
+			{"name": "medio de transporte"}, 
+			{"name": "fábrica tradicional"}, 
+			{"name": "taller"}, 
+			{"name": "almacén"}, 
+			{"name": "estrategias de ventas semi-sedentarias"}, 
+			{"name": "centro comercial"}, 
+			{"name": "pasaje comercial"}, 
+			{"name": "técnica de produccion"}
+		]
+	},
+	{
+		"name": "natural",
+		"children": [
+			{
+				"name": "zonas verdes",
+				"children":[
+					{"name": "alameda"},
+					{"name": "espacio público"},
+					{"name": "corredor vial"}
+				]
+			},
+			{
+				"name": "áreas protegidas",
+				"children":[
+					{"name": "humedal"},
+					{"name": "cerros orientales"},
+					{"name": "reserva forestal"}
+				]
+			},
+			{
+				"name": "áreas de manejo especial",
+				"children":[
+					{"name": "quebrada"},
+					{"name": "canal"},
+					{"name": "río"}
+				]
+			},
+			{
+				"name": "parques urbanos",
+				"children":[
+					{"name": "parque de bolsillo"},
+					{"name": "parque vecinal"},
+					{"name": "parque metropolitano"},
+					{"name": "parque regional"}
+				]
+			}
+		]
+	}
+]

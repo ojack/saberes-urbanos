@@ -1,7 +1,9 @@
 import React from 'react';
 import AddSite from './AddSite';
-import FormsyInput from './FormsyInput';
-import FormsyPlayground from './FormsyPlayground';
+import AdminList from './AdminList';
+
+// <AdminList/>
+// <AddSite data={data}/>
 
 var data = {
 	respuesta: null,
@@ -21,9 +23,11 @@ var data = {
 };
 
 var Admin = React.createClass({
+	
   render() {
     return (
-      <AddSite data={data}/>
+     <AddSite data={data}/>
+      
     );
   }
 });

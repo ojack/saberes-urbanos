@@ -1,4 +1,5 @@
 @import '../../bower_components/skeleton-less/less/skeleton';
+@import (inline) '../../node_modules/fixed-data-table/dist/fixed-data-table.css';
 
 html,
 body {
@@ -14,6 +15,16 @@ body {
   position: relative;
 }
 #map {
+  height: 100%;
+  /*width: 800px;*/
+  width: 100%;
+}
+#map-container-fullscreen {
+  width: 100%;
+  /*width: 800px;*/
+  height: 100%;
+}
+#map-fullscreen {
   height: 100%;
   /*width: 800px;*/
   width: 100%;
@@ -50,6 +61,13 @@ label {
   left: 0;
   bottom: 0;
   right: 0;
+}
+
+#geocode{
+  position: absolute;
+  top: 10;
+  left: 10;
+
 }
 /*#pin{
 	width: 30px;
