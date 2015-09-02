@@ -9,6 +9,7 @@ var SitioSchema = new mongoose.Schema({
 		barrio: String,
 		localidad: String,
 		respuesta: String,
+		direccion: String,
 		porque: String,
 		existente: Boolean,
 		 fotoUrl: String,

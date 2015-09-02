@@ -40,9 +40,10 @@
 
 // Colors
 @light-grey: #CCCCCC;
+@form-background: #fff;
 @medium-grey: #999999;
 @dark-grey: #333;
-@primary-color: #33c3f0;
+@primary-color: #ff3366;
 @secondary-color: #ff3366;
 //@secondary-color: lighten(@dark-grey, 13.5%);
 @border-color: #ff3366;
@@ -366,10 +367,13 @@ input {
   &[type="tel"],
   &[type="url"],
   &[type="password"] {
+
     height: 38px;
     padding: 6px 10px; // The 6px vertically centers text on FF, ignored by Webkit
-    background-color: #fff;
-    border: 1px solid lighten(@border-color, 8.8%);
+    background-color: @form-background;
+    font-family: @font-family;
+   // border: 1px solid lighten(@border-color, 8.8%);
+    border: none;
     border-radius: @global-radius;
     box-shadow: none;
     box-sizing: border-box;
@@ -384,8 +388,11 @@ select {
   height: 38px;
   padding: 6px 10px; /* The 6px vertically centers text on FF, ignored by Webkit */
   background-color: #fff;
-  border: 1px solid lighten(@border-color, 8.8%);
+  //border: 1px solid lighten(@border-color, 8.8%);
+  border: 1px solid @light-grey;
   border-radius: @global-radius;
+  font-family: @font-family;
+  text-transform: uppercase;
   box-shadow: none;
   box-sizing: border-box;
 }
@@ -425,9 +432,10 @@ input {
   &[type="url"]:focus,
   &[type="password"]:focus {
     border: none;
-    background-color: @light-grey;
-    //border: 1px solid @primary-color;
-    border: none;
+    background-color: @form-background;
+    border: 1px solid @primary-color;
+    font-family: @font-family;
+   // border: none;
     outline: 0;
   }
 }

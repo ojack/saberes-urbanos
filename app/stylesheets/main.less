@@ -1,13 +1,89 @@
-@import '../../bower_components/skeleton-less/less/skeleton';
-@import (inline) '../../node_modules/fixed-data-table/dist/fixed-data-table.css';
+@import '../../bower_components/normalize.css/normalize.css';
+@import './fonts';
+@import './skeleton';
+
+//@import (inline) '../../node_modules/fixed-data-table/dist/fixed-data-table.css';
+
+@accent-color: #ff3366;
+@background-color: #000;
+@text-color: #fff;
+@default-font: 'nexa_lightregular', Arial, sans-serif;
+@bold-font: 'nexa_boldregular', Arial, sans-serif;
+/*Hexagon styles*/
+
+@hex-size: 2.8em; // Only change size here. Best used with sizes from 5em - 10em.
+
+.transform(@string){
+  -webkit-transform: @string;
+  -moz-transform:    @string;
+  -ms-transform:     @string;
+  -o-transform:      @string;
+}
+
+.scale (@factor) {
+  -webkit-transform: scale(@factor);
+  -moz-transform:    scale(@factor);
+  -ms-transform:     scale(@factor);
+  -o-transform:      scale(@factor);
+}
+.rotate (@deg) {
+  -webkit-transform: rotate(@deg);
+  -moz-transform:    rotate(@deg);
+  -ms-transform:     rotate(@deg);
+  -o-transform:      rotate(@deg);
+}
+
+.animation (@name, @duration: 300ms, @delay: 0, @ease: ease) {
+  -webkit-animation: @name @duration @delay @ease;
+  -moz-animation:    @name @duration @delay @ease;
+  -ms-animation:     @name @duration @delay @ease;
+}
+
+.transition (@transition) {
+  -webkit-transition: @transition;  
+  -moz-transition:    @transition;
+  -ms-transition:     @transition; 
+  -o-transition:      @transition;  
+}
 
 html,
 body {
   background-color: #fff;
   float: center;
-  color: #000;
-  font-family: monospace;
+  color: @text-color;
+  background: @background-color;
+  font-family: @default-font;
+  margin: 0px;
+  padding: 0px;
+  /*font-family: monospace;*/
 }
+
+.header {
+  width: 100%;
+  padding: 31px;
+}
+
+.intro-container{
+  text-align: center;
+}
+
+h4 {
+  font-family:   @default-font;
+  font-size: 30px;
+ // text-align: center;
+  font-weight: normal;
+}
+
+button.button-large {
+  font-family:   @bold-font;
+  font-size: 22px;
+  padding: 0px 100px;
+  line-height: 54px;
+  height: 54px;
+ // margin:auto;
+}
+
+/*Map styles*/
 #map-container {
   width: 100%;
   /*width: 800px;*/
@@ -24,10 +100,88 @@ body {
   /*width: 800px;*/
   height: 100%;
 }
+
+#map-canvas {
+  position: absolute;
+  top: 0px;
+  left:0px;
+  pointer-events:none;
+  /*width: 100%;
+  width: 800px;
+  height: 100%;*/
+}
 #map-fullscreen {
   height: 100%;
   /*width: 800px;*/
   width: 100%;
+}
+
+
+#navigator {
+  position: fixed;
+  bottom: 0px;
+  left: 0px;
+  padding: 20px;
+  width: 300px;
+}
+
+form {
+//  padding: 20px;
+}
+
+/* ----------------------------------------- */
+.hex-container {
+ /* width: 100%; 
+  height: 100%;*/
+  position: fixed;
+  right: 0px;
+  bottom: 0px;
+ // line-height: 1.0;
+}
+/*div.even {
+  position: relative;
+ right: (@hex-size / 1.1);
+ float: right;
+  margin: 0%;
+  height: @hex-size;
+}
+div.odd {
+  position: relative;
+  float: right;
+ // margin-top: -6.5%;
+ // margin-bottom: -6.5%;
+   margin-top: -6.5%;
+  margin-bottom: -6.5%;
+}*/
+.hex {
+  position: fixed;
+  //margin: 1em auto;
+  float: right;
+//  width: @hex-size; height: (@hex-size * 1.7);
+ // margin-left: (@hex-size / 1.30);
+ // border-radius: 1em/.5em;
+ 
+  .rotate(-90deg);
+  display: inline-block;
+ 
+  transition: all 400ms ease-in-out;
+}
+.hex:before, .hex:after {
+  position: absolute;
+  width: inherit; height: inherit;
+  border-radius: inherit;
+  background-color: inherit;
+  content: '';
+}
+.hex:before {
+  .rotate(60deg);
+}
+.hex:after {
+  .rotate(-60deg);
+}
+.hex:hover {
+  background-color: @accent-color;
+  cursor: pointer;
 }
 .container {
   /*width: 100%;

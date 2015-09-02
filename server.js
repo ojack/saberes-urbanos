@@ -1,3 +1,4 @@
+require("babel/register");
 var express = require('express');
 var path = require('path');
 var logger = require('morgan');
@@ -12,23 +13,23 @@ var async = require('async');
 var config = require('./config');
 var AWS = require('aws-sdk'); 
 
-var s3 = new AWS.S3(); 
+// var s3 = new AWS.S3(); 
 
- //.createBucket({Bucket: 'myBucket456734563456'}, function(err, data) {
- // console.log(err);
-  var params = {Bucket: 'observatorio-urbano', Key: 'you', Body: 'Hello!'};
+//  //.createBucket({Bucket: 'myBucket456734563456'}, function(err, data) {
+//  // console.log(err);
+//   var params = {Bucket: 'observatorio-urbano', Key: 'you', Body: 'Hello!'};
 
-  s3.putObject(params, function(err, data) {
+//   s3.putObject(params, function(err, data) {
 
-      if (err)       
+//       if (err)       
 
-          console.log(err)     
+//           console.log(err)     
 
-      else       console.log("Successfully uploaded data to myBucket/myKey");   
+//       else       console.log("Successfully uploaded data to myBucket/myKey");   
 
-   });
+//    });
 
-//});
+// //});
 
 mongoose.connect(config.database);
 mongoose.connection.on('error', function() {
