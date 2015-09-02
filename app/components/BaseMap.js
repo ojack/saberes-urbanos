@@ -1,5 +1,5 @@
 import React from 'react';
-import mapboxgl from 'mapbox-gl';
+//import mapboxgl from 'mapbox-gl';
 import request from 'superagent';
 import mapStyle from './data/light-v7-edit.json'
 import InfoWindow from './InfoWindow'

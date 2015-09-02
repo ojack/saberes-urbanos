@@ -1,6 +1,6 @@
 import React from 'react';
 import Formsy from 'formsy-react';
-import mapboxgl from 'mapbox-gl';
+//import mapboxgl from 'mapbox-gl';
 import Geocode from './Geocode';
 
 var MapLocator = React.createClass({
