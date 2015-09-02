@@ -2,7 +2,7 @@ var mongoose = require('mongoose'),
 config = require('./../config');
 //https://www.npmjs.com/package/mongoose-attachments
 
-var LocalidadSchema = new mongoose.Schema({
+var BarrioSchema = new mongoose.Schema({
 	properties: {
 		OBJECTID: Number,
 		NOMBRE: String,
@@ -14,11 +14,11 @@ var LocalidadSchema = new mongoose.Schema({
 		'type': { type: String, default: "Polygon" },
 		coordinates : []
     }
-}, {collection: 'localidades'});
+}, {collection: 'barrios'});
 
 
 
 
 //TODO for production animalSchema.set('autoIndex', false);
 
- module.exports = mongoose.model('Localidad', LocalidadSchema);
+ module.exports = mongoose.model('Barrios', BarrioSchema);

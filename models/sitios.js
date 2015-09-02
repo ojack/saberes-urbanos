@@ -1,7 +1,5 @@
 var mongoose = require('mongoose'),
-crate = require('mongoose-crate'),
- LocalFS = require('mongoose-crate-localfs'),
-config = require('./../config');;
+config = require('./../config');
 //https://www.npmjs.com/package/mongoose-attachments
 
 var SitioSchema = new mongoose.Schema({
@@ -32,15 +30,6 @@ var SitioSchema = new mongoose.Schema({
 
 SitioSchema.index({ created: -1});
 
-SitioSchema.plugin(crate, {
-  storage: new LocalFS({
-    directory: config.fileStorage
-  }),
-  fields: {
-    foto: {},
-    sonido: {}
-  }
-})
 
 //TODO for production animalSchema.set('autoIndex', false);
 

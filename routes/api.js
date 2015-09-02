@@ -3,6 +3,8 @@ var router = express.Router();
 var multer = require('multer');
 var upload = multer({ dest: 'uploads/' });
 var Sitio = require('./../models/sitios');
+var Localidad = require('./../models/localidades');
+var Barrio = require('./../models/barrios');
 var config = require('./../config');
 var fs = require('fs');
 //var https = require('https');
@@ -77,6 +79,35 @@ router.get('/sitios', function(req, res, next) {
     Sitio.find().limit(limit).sort({created: -1}).exec(function(err, locations) {
       if (err) {
       	console.log(err);
+        return res.json(500, err);
+      }
+       console.log("found");
+      console.log(locations);
+      res.json(200, locations);
+    });
+});
+
+router.get('/barrios', function(req, res, next) {  
+    console.log("received localidades request");
+    var code = req.query.code || 4;
+    // find a location
+    Barrio.find({"properties.COD_LOC_IN": code}, {properties: true, _id: true}).exec(function(err, barrios) {
+      if (err) {
+        console.log(err);
+        return res.json(500, err);
+      }
+       console.log("found barrios");
+      console.log(barrios);
+      res.json(200, barrios);
+    });
+});
+
+router.get('/localidades', function(req, res, next) {  
+    console.log("received localidades request");
+    // find a location
+    Localidad.find({}, {properties: true, _id: true}).exec(function(err, locations) {
+      if (err) {
+        console.log(err);
         return res.json(500, err);
       }
        console.log("found");

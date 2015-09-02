@@ -4,6 +4,7 @@ import FRC from 'formsy-react-components';
 import MapLocator from './MapLocator';
 import request from 'superagent';
 import FormsyInput from './FormsyInput';
+import FormsyDropdown from './FormsyDropdown';
 import MultipleDropdown from './MultipleDropdown';
 
 var Checkbox = FRC.Checkbox;
@@ -17,7 +18,8 @@ var Textarea = FRC.Textarea;
 
 var AddSite = React.createClass({
     getInitialState(){
-        return {direccion: this.props.data.direccion}
+       
+        return {direccion: this.props.data.direccion, localidades: null, barrios: null}
     },
     resetForm() {
         this.refs.form.reset();
@@ -28,7 +30,7 @@ var AddSite = React.createClass({
         //console.log(this.state);
     },
     submitForm: function(data) {
-        //console.log(this.data);
+        console.log(data);
        var r = request.post('api/upload');
        for(var key in data){
         if(data[key] != undefined && data[key] != null){
@@ -44,8 +46,23 @@ var AddSite = React.createClass({
             } else {
 
                 //format coords for mongo 2d
-                 if(key == 'coords'){
+                if(key == 'coords'){
                     data[key] = [ data[key].lng, data[key].lat ]
+                } else if(key=='localidad'){
+                    var result = this.state.localidades.filter(function( obj ) {
+                  //   console.log(obj);
+                    return obj.properties.COD_LOC_IN == parseInt(data[key]);
+                   });
+                    console.log(data[key]);
+                    console.log(result);
+                    data[key] = result[0].properties.NOMBRE;
+                } else if(key=='barrio'){
+                    var result = this.state.barrios.filter(function( obj ) {
+                  //   console.log(obj);
+                    return obj.properties.OBJECTID == data[key];
+                   });
+                    console.log(result);
+                    data[key] = result[0].properties.NOMBRE;
                 }
                 r.field(key, data[key]);
             }
@@ -62,8 +79,27 @@ var AddSite = React.createClass({
              }
         });
     },
-
-
+    updateBarrioList: function(code){
+        console.log("time to update barrios " + code);
+        request
+           .get('/api/barrios')
+           .query({ code: code })
+           .end(function(err, res){
+                console.log(res.body);
+               // this.initSitios(res.body);
+                this.setState({barrios: res.body});
+           }.bind(this));
+    },
+    componentDidMount: function(){
+         request
+           .get('/api/localidades')
+           .query({ limit: 50 })
+           .end(function(err, res){
+                console.log(res.body);
+               // this.initSitios(res.body);
+                this.setState({localidades: res.body});
+           }.bind(this));
+    },
     render: function() {
 
         var radioOptions = [
@@ -76,6 +112,21 @@ var AddSite = React.createClass({
             {value: 'Chapinero', label: 'Chapinero'}
         ];
 
+        var localidadOptions = [];
+        if(this.state.localidades!=null){
+            localidadOptions = this.state.localidades.map(function(obj){
+                return {value: obj.properties.COD_LOC_IN, label: obj.properties.NOMBRE}
+            });
+            //console.log(localidadOptions);
+        }
+
+         var barrioOptions = [];
+        if(this.state.barrios!=null){
+            barrioOptions = this.state.barrios.map(function(obj){
+                return {value: obj.properties.OBJECTID, label: obj.properties.NOMBRE}
+            });
+            console.log(barrioOptions);
+        }
 
         selectOptions.unshift({value: '', label: 'Seleccionar uno…'});
 
@@ -121,18 +172,20 @@ var AddSite = React.createClass({
                             options={radioOptions}
                             required
                         />
-                        <Select
+                        <FormsyDropdown
                             {...sharedProps}
                             name="localidad"
                             label="Localidad"
+                            updateBarrioList = {this.updateBarrioList}
                             value={this.props.data.localidad}
-                            options={selectOptions}
+                            options={localidadOptions}
                             required
                         />
-                        <Input
+                        <FormsyDropdown
                             {...sharedProps}
                             name="barrio"
                             value={this.props.data.barrio}
+                            options={barrioOptions}
                             label="Barrio"
                         />
                          <FormsyInput

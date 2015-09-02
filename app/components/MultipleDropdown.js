@@ -17,19 +17,19 @@ import Dropdown from './Dropdown'
 
     handleChange(index, childIndex, children){
       var cutIndex = parseInt(index)+1;
-      console.log(" slice index is "+ cutIndex);
+      //console.log(" slice index is "+ cutIndex);
        var arr = this.state.dropdownData.slice(0, cutIndex);
-       console.log(" new array length is "+ arr);
+       //console.log(" new array length is "+ arr);
         
       var selection = arr[index];
-      console.log(" child index is  "+ childIndex + " selected value "+ selection.selectedValue);
+      //console.log(" child index is  "+ childIndex + " selected value "+ selection.selectedValue);
       if(childIndex!=selection.selectedValue){
         
         selection.selectedValue = childIndex;
         arr[index] = selection;
         if(children!=undefined){
           var newObj = {selectedValue: "", options: children};
-          console.log(newObj);
+          //console.log(newObj);
           arr.push(newObj);
         } else {
           if(index!="default"){
@@ -38,8 +38,8 @@ import Dropdown from './Dropdown'
              this.setValue(null);
           }
         }
-        console.log("data array is");
-        console.log(arr);
+        //console.log("data array is");
+        //console.log(arr);
         this.setState({dropdownData: arr});
       }
     
@@ -51,7 +51,7 @@ import Dropdown from './Dropdown'
         });
     },
     render: function () {
-      console.log(Categorias);
+      //console.log(Categorias);
       // Set a specific className based on the validation
       // state of this component. showRequired() is true 
       // when the value is empty and the required prop is 
@@ -62,7 +62,7 @@ import Dropdown from './Dropdown'
       // An error message is returned ONLY if the component is invalid
       // or the server has returned an error message
       var errorMessage = this.getErrorMessage();
-      console.log(Categorias.length);
+      //console.log(Categorias.length);
     var dropdowns = this.state.dropdownData.map(function(obj, index){
           return <Dropdown options={obj.options} index={index} changeValue={this.handleChange} selectedValue={obj.selectedValue}/>
      }.bind(this));
