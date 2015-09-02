@@ -8,7 +8,6 @@ var fs = require('fs');
 //var https = require('https');
 var request = require('superagent');
 var path = require('path');
-var mkdirp = require('mkdirp');
 
 
 
