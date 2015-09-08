@@ -1,7 +1,7 @@
 import React from 'react';
 //import mapboxgl from 'mapbox-gl';
 import request from 'superagent';
-import mapStyle from './data/light-v7-edit.json'
+import mapStyle from './data/light-v8.json'
 import InfoWindow from './InfoWindow'
 
 var BaseMap = React.createClass({
@@ -98,11 +98,11 @@ var BaseMap = React.createClass({
 			          	//for(var i )
 			         	console.log(e.point);
 			         	this.setState({selected: features[0].properties}, this.renderCanvas);
-			         	this.map.flyTo({center: e.latLng, zoom: 16, pitch: 100});
+			         	this.map.flyTo({center: e.lngLat, zoom: 16, pitch: 100});
 
 			         } else {
 			         	this.setState({selected: null}, this.renderCanvas);
-			         	this.map.flyTo({center: e.latLng, zoom: 15, pitch: 40});
+			         	this.map.flyTo({center: e.lngLat, zoom: 15, pitch: 40});
 			         }
 			      }.bind(this));
   				}.bind(this));
@@ -126,7 +126,7 @@ var BaseMap = React.createClass({
 		  container: 'map-fullscreen', // container id
 		  style: mapStyle, //stylesheet location
 		 // style: lightMapStyle,
-		  center: [this.state.coords.lat, this.state.coords.lng], // starting position
+		  center: [this.state.coords.lng, this.state.coords.lat], // starting position
 		  zoom: 5, // starting zoom
 		  pitch: 45
 		});
@@ -150,6 +150,8 @@ var BaseMap = React.createClass({
 				});
 				this.map.on('move', function(e) {
 					this.updatePixelCoords();
+					// console.log("moving");
+					// console.log(this.map.getBounds());
 				}.bind(this));
 			}.bind(this), 400);
 			/*if(this.props.localidadData!=null){
@@ -169,6 +171,13 @@ var BaseMap = React.createClass({
 		this.canvas.width = window.innerWidth;
 		this.canvas.height = window.innerHeight;
 		this.updatePixelCoords();
+	},
+	componentWillReceiveProps(nextProps){
+		if(nextProps.bounds != this.props.bounds){
+			console.log("bounds changed");
+			console.log(nextProps.bounds);
+			this.map.fitBounds(nextProps.bounds, {bearing: 100});
+		}
 	},
 	render() {
 		//console.l	<label>{this.props.label}</label>og("rerendering maplocator");

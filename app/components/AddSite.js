@@ -6,20 +6,22 @@ import request from 'superagent';
 import FormsyInput from './FormsyInput';
 import FormsyDropdown from './FormsyDropdown';
 import MultipleDropdown from './MultipleDropdown';
+import ConfirmSubmit from './ConfirmSubmit';
+import Select from 'react-select';
 
 var Checkbox = FRC.Checkbox;
 var CheckboxGroup = FRC.CheckboxGroup;
 var Input = FRC.Input;
 var RadioGroup = FRC.RadioGroup;
 var Row = FRC.Row;
-var Select = FRC.Select;
+
 var File = FRC.File;
 var Textarea = FRC.Textarea;
 
 var AddSite = React.createClass({
     getInitialState(){
        
-        return {direccion: this.props.data.direccion, localidades: null, barrios: null}
+        return {direccion: this.props.data.direccion, showSubmit: false, submitData: null, localidades: null, barrios: null}
     },
     resetForm() {
         this.refs.form.reset();
@@ -29,66 +31,41 @@ var AddSite = React.createClass({
         this.setState({direccion: val});
         //console.log(this.state);
     },
-    submitForm: function(data) {
-        console.log(data);
-       var r = request.post('api/upload');
-       for(var key in data){
-        if(data[key] != undefined && data[key] != null){
-
-            //attach files
-            if(key == 'foto' || key == 'sonido'){
-                if(data[key].length > 0){
-                    //console.log(data[key][0]);
-                    r.attach(key, data.foto[0]);
-                }
-
-            //send other fields as part of request
-            } else {
-
-                //format coords for mongo 2d
-                if(key == 'coords'){
-                    data[key] = [ data[key].lng, data[key].lat ]
-                } else if(key=='localidad'){
-                    var result = this.state.localidades.filter(function( obj ) {
-                  //   console.log(obj);
-                    return obj.properties.COD_LOC_IN == parseInt(data[key]);
-                   });
-                    console.log(data[key]);
-                    console.log(result);
-                    data[key] = result[0].properties.NOMBRE;
-                } else if(key=='barrio'){
-                    var result = this.state.barrios.filter(function( obj ) {
-                  //   console.log(obj);
-                    return obj.properties.OBJECTID == data[key];
-                   });
-                    console.log(result);
-                    data[key] = result[0].properties.NOMBRE;
-                }
-                r.field(key, data[key]);
-            }
-        }
-       // //console.log(key + " " + typeof(data[key]));
-        }
-            //console.log(data.coords);
-           // r.send(data);
-         r.end(function(err, res){
-             if (res.ok) {
-               //console.log('yay got ' + JSON.stringify(res.body));
-             } else {
-                //console.log('Oh no! error ' + res.text);
-             }
-        });
+    submitForm(){
+        console.log("show submit");
+         this.setState({showSubmit: true});
     },
-    updateBarrioList: function(code){
-        console.log("time to update barrios " + code);
+    updateData(data) {
+        // var data = this.props.data;
+        // console.log(this.props.data);
+        console.log("updating data");
+        var submitData = {};
+        if(this.state.barrio!=null) submitData.barrio = this.state.barrios[this.state.barrio].properties.NOMBRE;
+        if(this.state.localidad!=null) submitData.localidad = this.state.localidades[this.state.localidad].properties.NOMBRE;
+        for(var key in data){
+            if(data[key]!=null) submitData[key] = data[key];
+            
+        }
+        this.setState({submitData: submitData});//, showSubmit: true});
+     
+    },
+    updateBarrioList(index){
+      if(index != this.state.localidad){
+        this.setState({localidad: index, barrio: null});
+        var code = this.state.localidades[index].properties.COD_LOC_IN;
         request
            .get('/api/barrios')
            .query({ code: code })
+           .query({ bbox: true })
            .end(function(err, res){
-                console.log(res.body);
+               // console.log(res.body);
                // this.initSitios(res.body);
                 this.setState({barrios: res.body});
            }.bind(this));
+        }
+    },
+    updateBarrio(index){
+       this.setState({barrio: index});
     },
     componentDidMount: function(){
          request
@@ -99,6 +76,12 @@ var AddSite = React.createClass({
                // this.initSitios(res.body);
                 this.setState({localidades: res.body});
            }.bind(this));
+    },
+    hideSubmit(e){
+        e.preventDefault();
+        console.log("hiding");
+        this.setState({showSubmit: false});
+
     },
     render: function() {
 
@@ -114,20 +97,17 @@ var AddSite = React.createClass({
 
         var localidadOptions = [];
         if(this.state.localidades!=null){
-            localidadOptions = this.state.localidades.map(function(obj){
-                return {value: obj.properties.COD_LOC_IN, label: obj.properties.NOMBRE}
+            localidadOptions = this.state.localidades.map(function(obj, index){
+                return {value: index, label: obj.properties.NOMBRE}
             });
             //console.log(localidadOptions);
         }
-
          var barrioOptions = [];
         if(this.state.barrios!=null){
-            barrioOptions = this.state.barrios.map(function(obj){
-                return {value: obj.properties.OBJECTID, label: obj.properties.NOMBRE}
+            barrioOptions = this.state.barrios.map(function(obj, index){
+                return {value: index, label: obj.properties.NOMBRE}
             });
-            console.log(barrioOptions);
         }
-
         selectOptions.unshift({value: '', label: 'Seleccionar uno…'});
 
         var formClassName = '';
@@ -137,14 +117,19 @@ var AddSite = React.createClass({
             validatePristine: this.state.validatePristine,
             disabled: this.state.disabled */
         };
+        var style = {
+            margin: "30px"
+        };
 
+        var confirm = {};
+        if(this.state.showSubmit) confirm = (<ConfirmSubmit submitData={this.state.submitData} resetForm={this.resetForm} hideSubmit={this.hideSubmit}/>);
         return (
-            <div className="row">
+            <div style={style} className="row">
                 <div className="page-header">
-                    <h1>Add Sitio</h1>
+                    <h1>Agregar Sitio</h1>
                 </div>
-             
-                <Formsy.Form className={formClassName} onSubmit={this.submitForm} ref="form">
+              
+                <Formsy.Form className={formClassName} onSubmit={this.updateData} ref="form">
 
                     <fieldset>
                         <Input
@@ -153,7 +138,6 @@ var AddSite = React.createClass({
                             value={this.props.data.respuesta}
                             label="Repuesta"
                             type="text"
-                            required
                         />
                         <Textarea
                             {...sharedProps}
@@ -170,24 +154,23 @@ var AddSite = React.createClass({
                             value={this.props.data.temporalidad}
                             label="Temporalidad"
                             options={radioOptions}
-                            required
                         />
-                        <FormsyDropdown
-                            {...sharedProps}
-                            name="localidad"
-                            label="Localidad"
-                            updateBarrioList = {this.updateBarrioList}
-                            value={this.props.data.localidad}
+                       <Select
+                            name="form-field-name"
+                            searchPromptText="Localidad"
+                            placeholder="Localidad"
                             options={localidadOptions}
-                            required
+                            value={this.state.localidad}
+                            onChange={this.updateBarrioList}
                         />
-                        <FormsyDropdown
-                            {...sharedProps}
-                            name="barrio"
-                            value={this.props.data.barrio}
+                     <Select
+                            name="form-field-name"
+                            searchPromptText="Barrio"
+                            placeholder="Barrio"
+                            value={this.state.barrio}
                             options={barrioOptions}
-                            label="Barrio"
-                        />
+                            onChange={this.updateBarrio}
+                       />
                          <FormsyInput
                             {...sharedProps}
                             name="direccion"
@@ -229,8 +212,6 @@ var AddSite = React.createClass({
                             name="videoUrl"
                             value={this.props.data.videoUrl}
                             label="Link to video"
-                            validations="isUrl"
-                            validationError="Must be valid URL"
                         />
                         <Checkbox
                             {...sharedProps}
@@ -244,9 +225,10 @@ var AddSite = React.createClass({
                     <Row >
                         <input className="btn btn-default" onClick={this.resetForm} type="reset" defaultValue="Reset" />
                         {' '}
-                        <input className="btn btn-primary" formNoValidate={true} type="submit" defaultValue="Submit" />
+                        <input className="btn btn-primary" onClick={this.submitForm} formNoValidate={true} type="submit" defaultValue="Submit" />
                     </Row>
                 </Formsy.Form>
+                  {confirm}
             </div>
         );
     }

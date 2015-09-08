@@ -1,6 +1,7 @@
 import React from 'react';
 import Formsy from 'formsy-react';
 //import mapboxgl from 'mapbox-gl';
+import mapStyle from './data/light-v8.json'
 import Geocode from './Geocode';
 
 var MapLocator = React.createClass({
@@ -18,7 +19,7 @@ var MapLocator = React.createClass({
 		//console.log("updating");
 		//console.log(data);
 		this.setValue({lat: data.coords.lat, lng: data.coords.lng});
-		this.map.flyTo({center: [data.coords.lat, data.coords.lng], zoom: 16});
+		this.map.flyTo({center: [data.coords.lng, data.coords.lat], zoom: 16});
 	},
 	componentDidMount(){
 		//console.log("calling component mount");
@@ -26,9 +27,9 @@ var MapLocator = React.createClass({
 		mapboxgl.accessToken = 'pk.eyJ1Ijoib2oiLCJhIjoiSEw0cDJaNCJ9.9ffK1AU2O26zvS5Zsa6eqw';
 		this.map = new mapboxgl.Map({
 		  container: 'map', // container id
-		  style: 'https://www.mapbox.com/mapbox-gl-styles/styles/light-v7.json', //stylesheet location
-		 // style: lightMapStyle,
-		  center: [this.getValue().lat, this.getValue().lng], // starting position
+		  //style: 'https://www.mapbox.com/mapbox-gl-styles/styles/light-v7.json', //stylesheet location
+		  style: mapStyle,
+		  center: [this.getValue().lng, this.getValue().lat], // starting position
 		  zoom: 11, // starting zoom
 		 // pitch: 45
 		});
@@ -43,6 +44,7 @@ var MapLocator = React.createClass({
 		}.bind(this));
 		this.map.on('move', function() {
 			var coords = this.map.getCenter();
+			
 			this.setValue({lat: coords.lat, lng: coords.lng});
 		}.bind(this));
 		

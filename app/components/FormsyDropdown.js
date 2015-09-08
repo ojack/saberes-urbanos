@@ -16,8 +16,8 @@ import Formsy from 'formsy-react'
       // });
       //console.log(e.target.value);
       this.setValue(e.target.value);
-      if(this.props.updateBarrioList){
-        this.props.updateBarrioList(e.target.value);
+      if(this.props.callback){
+        this.props.callback(e.target.value);
       } 
       // if(e.target.value!="default"){
       //   children = this.props.options[e.target.value].children;

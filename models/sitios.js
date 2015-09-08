@@ -10,7 +10,7 @@ var SitioSchema = new mongoose.Schema({
 		direccion: String,
 		porque: String,
 		existente: Boolean,
-		 fotoUrl: String,
+		fotoUrl: String,
 	    sonidoUrl: String,
 	    videoUrl: String,
 	    created:  {type: Date, default: Date.now},

@@ -12,6 +12,7 @@ var Geocode = React.createClass({
 	},
 
 	handleKeyUp(e){
+		e.preventDefault();
 		if(e.keyCode == 13){
 			//console.log("handling key up");
 	      	//var query_string = "https://dev.virtualearth.net/REST/v1/Locations/1%20Microsoft%20Way%20Redmond%20WA%2098052?key=ArZ9iodclv6caCIXL7qFS8KBePoxP2a4etk2fVoy9Uw_BQEP3NEO7l_yNemfqQE2";

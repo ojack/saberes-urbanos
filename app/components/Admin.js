@@ -8,7 +8,7 @@ import AdminList from './AdminList';
 var data = {
 	respuesta: null,
 	porque: null,
-	existente: false,
+	existente: null,
 	localidad: null,
 	barrio: null, 
 	direccion: null, 
@@ -19,7 +19,7 @@ var data = {
 	foto: null,
 	sonido: null, 
 	videoUrl: null,
-	visible: false
+	visible: null
 };
 
 var Admin = React.createClass({

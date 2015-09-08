@@ -41,12 +41,20 @@ var _MultipleDropdown = require('./MultipleDropdown');
 
 var _MultipleDropdown2 = _interopRequireDefault(_MultipleDropdown);
 
+var _ConfirmSubmit = require('./ConfirmSubmit');
+
+var _ConfirmSubmit2 = _interopRequireDefault(_ConfirmSubmit);
+
+var _reactSelect = require('react-select');
+
+var _reactSelect2 = _interopRequireDefault(_reactSelect);
+
 var Checkbox = _formsyReactComponents2['default'].Checkbox;
 var CheckboxGroup = _formsyReactComponents2['default'].CheckboxGroup;
 var Input = _formsyReactComponents2['default'].Input;
 var RadioGroup = _formsyReactComponents2['default'].RadioGroup;
 var Row = _formsyReactComponents2['default'].Row;
-var Select = _formsyReactComponents2['default'].Select;
+
 var File = _formsyReactComponents2['default'].File;
 var Textarea = _formsyReactComponents2['default'].Textarea;
 
@@ -55,7 +63,7 @@ var AddSite = _react2['default'].createClass({
 
     getInitialState: function getInitialState() {
 
-        return { direccion: this.props.data.direccion, localidades: null, barrios: null };
+        return { direccion: this.props.data.direccion, showSubmit: false, submitData: null, localidades: null, barrios: null };
     },
     resetForm: function resetForm() {
         this.refs.form.reset();
@@ -65,63 +73,35 @@ var AddSite = _react2['default'].createClass({
         this.setState({ direccion: val });
         //console.log(this.state);
     },
-    submitForm: function submitForm(data) {
-        console.log(data);
-        var r = _superagent2['default'].post('api/upload');
-        for (var key in data) {
-            if (data[key] != undefined && data[key] != null) {
-
-                //attach files
-                if (key == 'foto' || key == 'sonido') {
-                    if (data[key].length > 0) {
-                        //console.log(data[key][0]);
-                        r.attach(key, data.foto[0]);
-                    }
-
-                    //send other fields as part of request
-                } else {
-
-                        //format coords for mongo 2d
-                        if (key == 'coords') {
-                            data[key] = [data[key].lng, data[key].lat];
-                        } else if (key == 'localidad') {
-                            var result = this.state.localidades.filter(function (obj) {
-                                //   console.log(obj);
-                                return obj.properties.COD_LOC_IN == parseInt(data[key]);
-                            });
-                            console.log(data[key]);
-                            console.log(result);
-                            data[key] = result[0].properties.NOMBRE;
-                        } else if (key == 'barrio') {
-                            var result = this.state.barrios.filter(function (obj) {
-                                //   console.log(obj);
-                                return obj.properties.OBJECTID == data[key];
-                            });
-                            console.log(result);
-                            data[key] = result[0].properties.NOMBRE;
-                        }
-                        r.field(key, data[key]);
-                    }
-            }
-            // //console.log(key + " " + typeof(data[key]));
-        }
-        //console.log(data.coords);
-        // r.send(data);
-        r.end(function (err, res) {
-            if (res.ok) {
-                //console.log('yay got ' + JSON.stringify(res.body));
-            } else {
-                    //console.log('Oh no! error ' + res.text);
-                }
-        });
+    submitForm: function submitForm() {
+        console.log("show submit");
+        this.setState({ showSubmit: true });
     },
-    updateBarrioList: function updateBarrioList(code) {
-        console.log("time to update barrios " + code);
-        _superagent2['default'].get('/api/barrios').query({ code: code }).end((function (err, res) {
-            console.log(res.body);
-            // this.initSitios(res.body);
-            this.setState({ barrios: res.body });
-        }).bind(this));
+    updateData: function updateData(data) {
+        // var data = this.props.data;
+        // console.log(this.props.data);
+        console.log("updating data");
+        var submitData = {};
+        if (this.state.barrio != null) submitData.barrio = this.state.barrios[this.state.barrio].properties.NOMBRE;
+        if (this.state.localidad != null) submitData.localidad = this.state.localidades[this.state.localidad].properties.NOMBRE;
+        for (var key in data) {
+            if (data[key] != null) submitData[key] = data[key];
+        }
+        this.setState({ submitData: submitData }); //, showSubmit: true});
+    },
+    updateBarrioList: function updateBarrioList(index) {
+        if (index != this.state.localidad) {
+            this.setState({ localidad: index, barrio: null });
+            var code = this.state.localidades[index].properties.COD_LOC_IN;
+            _superagent2['default'].get('/api/barrios').query({ code: code }).query({ bbox: true }).end((function (err, res) {
+                // console.log(res.body);
+                // this.initSitios(res.body);
+                this.setState({ barrios: res.body });
+            }).bind(this));
+        }
+    },
+    updateBarrio: function updateBarrio(index) {
+        this.setState({ barrio: index });
     },
     componentDidMount: function componentDidMount() {
         _superagent2['default'].get('/api/localidades').query({ limit: 50 }).end((function (err, res) {
@@ -129,6 +109,11 @@ var AddSite = _react2['default'].createClass({
             // this.initSitios(res.body);
             this.setState({ localidades: res.body });
         }).bind(this));
+    },
+    hideSubmit: function hideSubmit(e) {
+        e.preventDefault();
+        console.log("hiding");
+        this.setState({ showSubmit: false });
     },
     render: function render() {
 
@@ -138,20 +123,17 @@ var AddSite = _react2['default'].createClass({
 
         var localidadOptions = [];
         if (this.state.localidades != null) {
-            localidadOptions = this.state.localidades.map(function (obj) {
-                return { value: obj.properties.COD_LOC_IN, label: obj.properties.NOMBRE };
+            localidadOptions = this.state.localidades.map(function (obj, index) {
+                return { value: index, label: obj.properties.NOMBRE };
             });
             //console.log(localidadOptions);
         }
-
         var barrioOptions = [];
         if (this.state.barrios != null) {
-            barrioOptions = this.state.barrios.map(function (obj) {
-                return { value: obj.properties.OBJECTID, label: obj.properties.NOMBRE };
+            barrioOptions = this.state.barrios.map(function (obj, index) {
+                return { value: index, label: obj.properties.NOMBRE };
             });
-            console.log(barrioOptions);
         }
-
         selectOptions.unshift({ value: '', label: 'Seleccionar uno…' });
 
         var formClassName = '';
@@ -161,22 +143,27 @@ var AddSite = _react2['default'].createClass({
               validatePristine: this.state.validatePristine,
               disabled: this.state.disabled */
         };
+        var style = {
+            margin: "30px"
+        };
 
+        var confirm = {};
+        if (this.state.showSubmit) confirm = _react2['default'].createElement(_ConfirmSubmit2['default'], { submitData: this.state.submitData, resetForm: this.resetForm, hideSubmit: this.hideSubmit });
         return _react2['default'].createElement(
             'div',
-            { className: 'row' },
+            { style: style, className: 'row' },
             _react2['default'].createElement(
                 'div',
                 { className: 'page-header' },
                 _react2['default'].createElement(
                     'h1',
                     null,
-                    'Add Sitio'
+                    'Agregar Sitio'
                 )
             ),
             _react2['default'].createElement(
                 _formsyReact2['default'].Form,
-                { className: formClassName, onSubmit: this.submitForm, ref: 'form' },
+                { className: formClassName, onSubmit: this.updateData, ref: 'form' },
                 _react2['default'].createElement(
                     'fieldset',
                     null,
@@ -184,8 +171,7 @@ var AddSite = _react2['default'].createClass({
                         name: 'respuesta',
                         value: this.props.data.respuesta,
                         label: 'Repuesta',
-                        type: 'text',
-                        required: true
+                        type: 'text'
                     })),
                     _react2['default'].createElement(Textarea, _extends({}, sharedProps, {
                         rows: 3,
@@ -199,23 +185,24 @@ var AddSite = _react2['default'].createClass({
                         type: 'inline',
                         value: this.props.data.temporalidad,
                         label: 'Temporalidad',
-                        options: radioOptions,
-                        required: true
+                        options: radioOptions
                     })),
-                    _react2['default'].createElement(_FormsyDropdown2['default'], _extends({}, sharedProps, {
-                        name: 'localidad',
-                        label: 'Localidad',
-                        updateBarrioList: this.updateBarrioList,
-                        value: this.props.data.localidad,
+                    _react2['default'].createElement(_reactSelect2['default'], {
+                        name: 'form-field-name',
+                        searchPromptText: 'Localidad',
+                        placeholder: 'Localidad',
                         options: localidadOptions,
-                        required: true
-                    })),
-                    _react2['default'].createElement(_FormsyDropdown2['default'], _extends({}, sharedProps, {
-                        name: 'barrio',
-                        value: this.props.data.barrio,
+                        value: this.state.localidad,
+                        onChange: this.updateBarrioList
+                    }),
+                    _react2['default'].createElement(_reactSelect2['default'], {
+                        name: 'form-field-name',
+                        searchPromptText: 'Barrio',
+                        placeholder: 'Barrio',
+                        value: this.state.barrio,
                         options: barrioOptions,
-                        label: 'Barrio'
-                    })),
+                        onChange: this.updateBarrio
+                    }),
                     _react2['default'].createElement(_FormsyInput2['default'], _extends({}, sharedProps, {
                         name: 'direccion',
                         value: this.props.data.direccion,
@@ -249,9 +236,7 @@ var AddSite = _react2['default'].createClass({
                     _react2['default'].createElement(Input, _extends({}, sharedProps, {
                         name: 'videoUrl',
                         value: this.props.data.videoUrl,
-                        label: 'Link to video',
-                        validations: 'isUrl',
-                        validationError: 'Must be valid URL'
+                        label: 'Link to video'
                     })),
                     _react2['default'].createElement(Checkbox, _extends({}, sharedProps, {
                         name: 'visible',
@@ -264,9 +249,10 @@ var AddSite = _react2['default'].createClass({
                     null,
                     _react2['default'].createElement('input', { className: 'btn btn-default', onClick: this.resetForm, type: 'reset', defaultValue: 'Reset' }),
                     ' ',
-                    _react2['default'].createElement('input', { className: 'btn btn-primary', formNoValidate: true, type: 'submit', defaultValue: 'Submit' })
+                    _react2['default'].createElement('input', { className: 'btn btn-primary', onClick: this.submitForm, formNoValidate: true, type: 'submit', defaultValue: 'Submit' })
                 )
-            )
+            ),
+            confirm
         );
     }
 });
@@ -274,7 +260,7 @@ var AddSite = _react2['default'].createClass({
 exports['default'] = AddSite;
 module.exports = exports['default'];
 
-},{"./FormsyDropdown":7,"./FormsyInput":8,"./MapLocator":14,"./MultipleDropdown":15,"formsy-react":90,"formsy-react-components":82,"react":"react","superagent":114}],2:[function(require,module,exports){
+},{"./ConfirmSubmit":6,"./FormsyDropdown":8,"./FormsyInput":9,"./MapLocator":15,"./MultipleDropdown":16,"formsy-react":92,"formsy-react-components":84,"react":"react","react-select":96,"superagent":122}],2:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -301,7 +287,7 @@ var _AdminList2 = _interopRequireDefault(_AdminList);
 var data = {
 	respuesta: null,
 	porque: null,
-	existente: false,
+	existente: null,
 	localidad: null,
 	barrio: null,
 	direccion: null,
@@ -312,7 +298,7 @@ var data = {
 	foto: null,
 	sonido: null,
 	videoUrl: null,
-	visible: false
+	visible: null
 };
 
 var Admin = _react2['default'].createClass({
@@ -468,7 +454,7 @@ var AdminList = _react2['default'].createClass({
 exports['default'] = AdminList;
 module.exports = exports['default'];
 
-},{"fixed-data-table":76,"react":"react","superagent":114}],4:[function(require,module,exports){
+},{"fixed-data-table":78,"react":"react","superagent":122}],4:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -536,9 +522,9 @@ var _superagent = require('superagent');
 
 var _superagent2 = _interopRequireDefault(_superagent);
 
-var _dataLightV7EditJson = require('./data/light-v7-edit.json');
+var _dataLightV8Json = require('./data/light-v8.json');
 
-var _dataLightV7EditJson2 = _interopRequireDefault(_dataLightV7EditJson);
+var _dataLightV8Json2 = _interopRequireDefault(_dataLightV8Json);
 
 var _InfoWindow = require('./InfoWindow');
 
@@ -637,10 +623,10 @@ var BaseMap = _react2['default'].createClass({
 						//for(var i )
 						console.log(e.point);
 						this.setState({ selected: features[0].properties }, this.renderCanvas);
-						this.map.flyTo({ center: e.latLng, zoom: 16, pitch: 100 });
+						this.map.flyTo({ center: e.lngLat, zoom: 16, pitch: 100 });
 					} else {
 						this.setState({ selected: null }, this.renderCanvas);
-						this.map.flyTo({ center: e.latLng, zoom: 15, pitch: 40 });
+						this.map.flyTo({ center: e.lngLat, zoom: 15, pitch: 40 });
 					}
 				}).bind(this));
 			}).bind(this));
@@ -657,9 +643,9 @@ var BaseMap = _react2['default'].createClass({
 		mapboxgl.accessToken = 'pk.eyJ1Ijoib2oiLCJhIjoiSEw0cDJaNCJ9.9ffK1AU2O26zvS5Zsa6eqw';
 		this.map = new mapboxgl.Map({
 			container: 'map-fullscreen', // container id
-			style: _dataLightV7EditJson2['default'], //stylesheet location
+			style: _dataLightV8Json2['default'], //stylesheet location
 			// style: lightMapStyle,
-			center: [this.state.coords.lat, this.state.coords.lng], // starting position
+			center: [this.state.coords.lng, this.state.coords.lat], // starting position
 			zoom: 5, // starting zoom
 			pitch: 45
 		});
@@ -683,6 +669,8 @@ var BaseMap = _react2['default'].createClass({
 				});
 				this.map.on('move', (function (e) {
 					this.updatePixelCoords();
+					// console.log("moving");
+					// console.log(this.map.getBounds());
 				}).bind(this));
 			}).bind(this), 400);
 			/*if(this.props.localidadData!=null){
@@ -703,6 +691,13 @@ var BaseMap = _react2['default'].createClass({
 		this.canvas.height = window.innerHeight;
 		this.updatePixelCoords();
 	},
+	componentWillReceiveProps: function componentWillReceiveProps(nextProps) {
+		if (nextProps.bounds != this.props.bounds) {
+			console.log("bounds changed");
+			console.log(nextProps.bounds);
+			this.map.fitBounds(nextProps.bounds, { bearing: 100 });
+		}
+	},
 	render: function render() {
 		//console.l	<label>{this.props.label}</label>og("rerendering maplocator");
 		var info = {};
@@ -722,7 +717,286 @@ var BaseMap = _react2['default'].createClass({
 exports['default'] = BaseMap;
 module.exports = exports['default'];
 
-},{"./InfoWindow":11,"./data/light-v7-edit.json":23,"react":"react","superagent":114}],6:[function(require,module,exports){
+},{"./InfoWindow":12,"./data/light-v8.json":25,"react":"react","superagent":122}],6:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, '__esModule', {
+  value: true
+});
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+var _react = require('react');
+
+var _react2 = _interopRequireDefault(_react);
+
+var _superagent = require('superagent');
+
+var _superagent2 = _interopRequireDefault(_superagent);
+
+function upload_file(file, signed_request, url, callback) {
+  var xhr = new XMLHttpRequest();
+  xhr.open("PUT", signed_request);
+  xhr.setRequestHeader('x-amz-acl', 'public-read');
+  xhr.onload = function () {
+    if (xhr.status === 200) {
+      callback(null, url);
+    }
+  };
+  xhr.onerror = function () {
+    callback("couldnt upload file", null);
+  };
+  xhr.send(file);
+}
+
+var ConfirmSubmit = _react2['default'].createClass({
+  displayName: 'ConfirmSubmit',
+
+  getInitialState: function getInitialState() {
+    return { confirmationState: "form", statusMessage: [], numCallbacks: 0 };
+  },
+  handleSubmit: function handleSubmit(e) {
+    e.preventDefault(); // maybe remove this when more figured out
+    console.log(this.props.submitData);
+
+    var numCallbacks = 1; // hacky way to know when all callbacks have terminated
+    var r = _superagent2['default'].post('/api/add-sitio').send(this.props.submitData);
+    if (this.props.submitData.foto && this.props.submitData.foto != null) {
+      numCallbacks++;
+      var foto = this.props.submitData.foto[0];
+      r.send({ foto_name: foto.name }).send({ foto_type: foto.type });
+    }
+    if (this.props.submitData.sonido && this.props.submitData.sonido != null) {
+      numCallbacks++;
+      var sonido = this.props.submitData.sonido[0];
+      r.send({ sonido_name: sonido.name }).send({ sonido_type: sonido.type });
+    }
+    this.setState({ confirmationState: "loading", statusMessage: ["adding to database"] });
+    this.setState({ numCallbacks: numCallbacks });
+    // .query({ file_name: file.name })
+    // .query({ file_type: file.type })
+    r.end((function (err, res) {
+      this.setState({ numCallbacks: this.state.numCallbacks - 1 });
+      console.log(res);
+      if (err) {
+        this.setState({ statusMessage: [" ERROR " + err] });
+      } else {
+        var response = JSON.parse(res.text);
+        var status = [];
+        status.push("+ sitio agregado al base de datos");
+        console.log(response);
+        if (response.foto) {
+          var foto = this.props.submitData.foto[0];
+          status.push("subiendo foto");
+
+          upload_file(foto, response.foto.signed_request, response.foto.url, (function (err, url) {
+            if (err) {
+              console.log(err);
+            } else {
+              console.log(url);
+              _superagent2['default'].put('/api/add-url').send({ id: response.foto.id, type: "foto", url: url }).end((function (err, res) {
+                if (err) {
+                  this.setState({ statusMessage: ["ERROR subiendo foto: " + err] });
+                } else {
+                  this.setState({ statusMessage: ["foto subido :)" + url], numCallbacks: this.state.numCallbacks - 1 });
+                }
+              }).bind(this));
+            }
+          }).bind(this));
+        }
+        if (response.sonido) {
+          status.push("subiendo audio");
+
+          var sonido = this.props.submitData.sonido[0];
+          upload_file(sonido, response.sonido.signed_request, response.sonido.url, (function (err, url) {
+            if (err) {
+              console.log(err);
+            } else {
+              console.log(url);
+              _superagent2['default'].put('/api/add-url').send({ id: response.sonido.id, type: "sonido", url: url }).end((function (err, res) {
+                if (err) {
+                  this.setState({ statusMessage: ["ERROR subiendo audio: " + err] });
+                } else {
+                  this.setState({ statusMessage: ["audio subido :) " + url], numCallbacks: this.state.numCallbacks - 1 });
+                }
+              }).bind(this));
+            }
+          }).bind(this));
+        }
+        this.setState({ statusMessage: status });
+      }
+      //    console.log(response);
+      // console.log(res);
+    }).bind(this));
+  },
+  render: function render() {
+    var style = {
+      position: "fixed",
+      top: "0px",
+      left: "0px",
+      width: "100%",
+      height: "100%",
+      backgroundColor: "rgba(0, 0, 0, 0.4)"
+
+    };
+
+    var popupStyle = {
+      backgroundColor: "#000",
+      width: "600px",
+      padding: "20px",
+      margin: "auto",
+      position: "absolute",
+      top: 0, left: 0, bottom: 0, right: 0, height: "300"
+
+    };
+    var popupContents = [];
+    if (this.state.confirmationState == "form") {
+
+      var buttonStyle = {
+        marginLeft: "10px"
+      };
+      var submitData = [];
+      for (var key in this.props.submitData) {
+        var val = "";
+        if (key == "foto" || key == "sonido") {
+          val = JSON.stringify(this.props.submitData[key][0].name);
+        } else {
+          val = JSON.stringify(this.props.submitData[key]);
+        }
+        submitData.push(_react2['default'].createElement(
+          'li',
+          null,
+          key + ": " + val
+        ));
+      }
+
+      popupContents = _react2['default'].createElement(
+        'div',
+        { id: 'confirm' },
+        _react2['default'].createElement(
+          'h3',
+          null,
+          ' Confirmar '
+        ),
+        _react2['default'].createElement(
+          'ul',
+          null,
+          submitData
+        ),
+        _react2['default'].createElement(
+          'button',
+          { onClick: this.props.hideSubmit },
+          'Keep editing '
+        ),
+        _react2['default'].createElement(
+          'button',
+          { style: buttonStyle, onClick: this.handleSubmit },
+          'Submit'
+        )
+      );
+    } else if (this.state.confirmationState == "loading") {
+      console.log(" callbacks " + this.state.numCallbacks);
+      if (this.state.numCallbacks <= 0) {
+        popupContents = _react2['default'].createElement(
+          'h1',
+          null,
+          'Success!'
+        );
+        setTimeout(function () {
+          location.reload();
+        }, 500);
+      } else {
+        var status = this.state.statusMessage.map(function (string) {
+          console.log(string);
+          return _react2['default'].createElement(
+            'div',
+            null,
+            string
+          );
+        });
+        popupContents = _react2['default'].createElement(
+          'div',
+          null,
+          _react2['default'].createElement(
+            'div',
+            { className: 'loader' },
+            'Loading...'
+          ),
+          _react2['default'].createElement(
+            'div',
+            null,
+            status
+          )
+        );
+      }
+    }
+
+    return _react2['default'].createElement(
+      'div',
+      { style: style },
+      _react2['default'].createElement(
+        'div',
+        { style: popupStyle },
+        popupContents
+      )
+    );
+  }
+
+});
+
+exports['default'] = ConfirmSubmit;
+
+// // var r = request.post('api/upload');
+//       for(var key in data){
+//        if(data[key] != undefined && data[key] != null){
+
+//            //attach files
+//            if(key == 'foto' || key == 'sonido'){
+//                if(data[key].length > 0){
+//                    //console.log(data[key][0]);
+//                    // r.attach(key, data.foto[0]);
+//                }
+
+//            //send other fields as part of request
+//            } else {
+
+//                //format coords for mongo 2d
+//                if(key == 'coords'){
+//                    data[key] = [ data[key].lng, data[key].lat ]
+//                } else if(key=='localidad'){
+//                    var result = this.state.localidades.filter(function( obj ) {
+//                  //   console.log(obj);
+//                    return obj.properties.COD_LOC_IN == parseInt(data[key]);
+//                   });
+//                    console.log(data[key]);
+//                    console.log(result);
+//                    data[key] = result[0].properties.NOMBRE;
+//                } else if(key=='barrio'){
+//                    var result = this.state.barrios.filter(function( obj ) {
+//                  //   console.log(obj);
+//                    return obj.properties.OBJECTID == data[key];
+//                   });
+//                    console.log(result);
+//                    data[key] = result[0].properties.NOMBRE;
+//                }
+//                // r.field(key, data[key]);
+//            }
+//        }
+//       // //console.log(key + " " + typeof(data[key]));
+//        }
+
+//console.log(data.coords);
+//    // r.send(data);
+//  r.end(function(err, res){
+//      if (res.ok) {
+//        //console.log('yay got ' + JSON.stringify(res.body));
+//      } else {
+//         //console.log('Oh no! error ' + res.text);
+//      }
+// });
+module.exports = exports['default'];
+
+},{"react":"react","superagent":122}],7:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -773,7 +1047,7 @@ var Dropdown = _react2["default"].createClass({
 exports["default"] = Dropdown;
 module.exports = exports["default"];
 
-},{"react":"react"}],7:[function(require,module,exports){
+},{"react":"react"}],8:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -806,8 +1080,8 @@ var FormsyDropdown = _react2['default'].createClass({
     // });
     //console.log(e.target.value);
     this.setValue(e.target.value);
-    if (this.props.updateBarrioList) {
-      this.props.updateBarrioList(e.target.value);
+    if (this.props.callback) {
+      this.props.callback(e.target.value);
     }
     // if(e.target.value!="default"){
     //   children = this.props.options[e.target.value].children;
@@ -851,7 +1125,7 @@ var FormsyDropdown = _react2['default'].createClass({
 exports['default'] = FormsyDropdown;
 module.exports = exports['default'];
 
-},{"formsy-react":90,"react":"react"}],8:[function(require,module,exports){
+},{"formsy-react":92,"react":"react"}],9:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -914,7 +1188,7 @@ var FormsyInput = _react2['default'].createClass({
 exports['default'] = FormsyInput;
 module.exports = exports['default'];
 
-},{"formsy-react":90,"react":"react"}],9:[function(require,module,exports){
+},{"formsy-react":92,"react":"react"}],10:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -943,6 +1217,7 @@ var Geocode = _react2['default'].createClass({
 	},
 
 	handleKeyUp: function handleKeyUp(e) {
+		e.preventDefault();
 		if (e.keyCode == 13) {
 			//console.log("handling key up");
 			//var query_string = "https://dev.virtualearth.net/REST/v1/Locations/1%20Microsoft%20Way%20Redmond%20WA%2098052?key=ArZ9iodclv6caCIXL7qFS8KBePoxP2a4etk2fVoy9Uw_BQEP3NEO7l_yNemfqQE2";
@@ -993,7 +1268,7 @@ var Geocode = _react2['default'].createClass({
 exports['default'] = Geocode;
 module.exports = exports['default'];
 
-},{"react":"react","superagent":114}],10:[function(require,module,exports){
+},{"react":"react","superagent":122}],11:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -1058,7 +1333,7 @@ var HexGrid = _react2['default'].createClass({
 exports['default'] = HexGrid;
 module.exports = exports['default'];
 
-},{"react":"react"}],11:[function(require,module,exports){
+},{"react":"react"}],12:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -1150,7 +1425,7 @@ var InfoWindow = _react2["default"].createClass({
 exports["default"] = InfoWindow;
 module.exports = exports["default"];
 
-},{"react":"react"}],12:[function(require,module,exports){
+},{"react":"react"}],13:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -1203,11 +1478,11 @@ var Intro = _react2["default"].createClass({
 exports["default"] = Intro;
 module.exports = exports["default"];
 
-},{"react":"react"}],13:[function(require,module,exports){
+},{"react":"react"}],14:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
-  value: true
+	value: true
 });
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
@@ -1228,25 +1503,45 @@ var _Navigation = require('./Navigation');
 
 var _Navigation2 = _interopRequireDefault(_Navigation);
 
-var Main = _react2['default'].createClass({
-  displayName: 'Main',
+// ne:
+// lat: 4.838602784913988
+// lng: -73.91643370363467
 
-  render: function render() {
-    return _react2['default'].createElement(
-      'div',
-      null,
-      _react2['default'].createElement(_BaseMap2['default'], null),
-      _react2['default'].createElement(_HexGrid2['default'], null),
-      _react2['default'].createElement(_Navigation2['default'], null)
-    );
-  }
+// sw:
+// lat: 4.5155410235603455
+// lng: -74.16126694164626
+
+var Main = _react2['default'].createClass({
+	displayName: 'Main',
+
+	getInitialState: function getInitialState() {
+		var sw = new mapboxgl.LngLat(-74.16126694164626, 4.5155410235603455);
+		var ne = new mapboxgl.LngLat(-73.91643370363467, 4.838602784913988);
+		var bounds = new mapboxgl.LngLatBounds(sw, ne);
+		return { bounds: bounds };
+	},
+	setBounds: function setBounds(bbox) {
+		var ne = new mapboxgl.LngLat(bbox[0], bbox[1]);
+		var sw = new mapboxgl.LngLat(bbox[2], bbox[3]);
+		var bounds = new mapboxgl.LngLatBounds(sw, ne);
+		this.setState({ bounds: bounds });
+	},
+	render: function render() {
+		return _react2['default'].createElement(
+			'div',
+			null,
+			_react2['default'].createElement(_BaseMap2['default'], { bounds: this.state.bounds }),
+			_react2['default'].createElement(_HexGrid2['default'], null),
+			_react2['default'].createElement(_Navigation2['default'], { setBounds: this.setBounds })
+		);
+	}
 
 });
 
 exports['default'] = Main;
 module.exports = exports['default'];
 
-},{"./BaseMap":5,"./HexGrid":10,"./Navigation":16,"react":"react"}],14:[function(require,module,exports){
+},{"./BaseMap":5,"./HexGrid":11,"./Navigation":17,"react":"react"}],15:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -1264,6 +1559,10 @@ var _formsyReact = require('formsy-react');
 var _formsyReact2 = _interopRequireDefault(_formsyReact);
 
 //import mapboxgl from 'mapbox-gl';
+
+var _dataLightV8Json = require('./data/light-v8.json');
+
+var _dataLightV8Json2 = _interopRequireDefault(_dataLightV8Json);
 
 var _Geocode = require('./Geocode');
 
@@ -1286,7 +1585,7 @@ var MapLocator = _react2['default'].createClass({
 		//console.log("updating");
 		//console.log(data);
 		this.setValue({ lat: data.coords.lat, lng: data.coords.lng });
-		this.map.flyTo({ center: [data.coords.lat, data.coords.lng], zoom: 16 });
+		this.map.flyTo({ center: [data.coords.lng, data.coords.lat], zoom: 16 });
 	},
 	componentDidMount: function componentDidMount() {
 		//console.log("calling component mount");
@@ -1294,9 +1593,9 @@ var MapLocator = _react2['default'].createClass({
 		mapboxgl.accessToken = 'pk.eyJ1Ijoib2oiLCJhIjoiSEw0cDJaNCJ9.9ffK1AU2O26zvS5Zsa6eqw';
 		this.map = new mapboxgl.Map({
 			container: 'map', // container id
-			style: 'https://www.mapbox.com/mapbox-gl-styles/styles/light-v7.json', //stylesheet location
-			// style: lightMapStyle,
-			center: [this.getValue().lat, this.getValue().lng], // starting position
+			//style: 'https://www.mapbox.com/mapbox-gl-styles/styles/light-v7.json', //stylesheet location
+			style: _dataLightV8Json2['default'],
+			center: [this.getValue().lng, this.getValue().lat], // starting position
 			zoom: 11 });
 		// starting zoom
 		// pitch: 45
@@ -1311,6 +1610,7 @@ var MapLocator = _react2['default'].createClass({
 		}).bind(this));
 		this.map.on('move', (function () {
 			var coords = this.map.getCenter();
+
 			this.setValue({ lat: coords.lat, lng: coords.lng });
 		}).bind(this));
 	},
@@ -1343,7 +1643,7 @@ var MapLocator = _react2['default'].createClass({
 exports['default'] = MapLocator;
 module.exports = exports['default'];
 
-},{"./Geocode":9,"formsy-react":90,"react":"react"}],15:[function(require,module,exports){
+},{"./Geocode":10,"./data/light-v8.json":25,"formsy-react":92,"react":"react"}],16:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -1447,93 +1747,107 @@ var MultipleDropdown = _react2['default'].createClass({
 exports['default'] = MultipleDropdown;
 module.exports = exports['default'];
 
-},{"./Dropdown":6,"./data/categorias.json":22,"formsy-react":90,"react":"react"}],16:[function(require,module,exports){
-"use strict";
+},{"./Dropdown":7,"./data/categorias.json":24,"formsy-react":92,"react":"react"}],17:[function(require,module,exports){
+'use strict';
 
-Object.defineProperty(exports, "__esModule", {
-	value: true
+Object.defineProperty(exports, '__esModule', {
+  value: true
 });
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
 var _react = require('react');
 
 var _react2 = _interopRequireDefault(_react);
 
-var Navigation = _react2["default"].createClass({
-	displayName: "Navigation",
+var _SearchDropdown = require('./SearchDropdown');
 
-	render: function render() {
-		return _react2["default"].createElement(
-			"form",
-			{ id: "navigator" },
-			_react2["default"].createElement("input", { className: "u-full-width", type: "text", placeholder: "Buscar..", id: "exampleEmailInput" }),
-			_react2["default"].createElement(
-				"select",
-				{ className: "u-full-width", id: "localidad" },
-				_react2["default"].createElement(
-					"option",
-					{ value: "Option 1" },
-					"Localidad"
-				),
-				_react2["default"].createElement(
-					"option",
-					{ value: "Option 2" },
-					"Admiration"
-				),
-				_react2["default"].createElement(
-					"option",
-					{ value: "Option 3" },
-					"Can I get your number?"
-				)
-			),
-			_react2["default"].createElement(
-				"select",
-				{ className: "u-full-width", id: "barrio" },
-				_react2["default"].createElement(
-					"option",
-					{ value: "Option 1" },
-					"Barrio"
-				),
-				_react2["default"].createElement(
-					"option",
-					{ value: "Option 2" },
-					"BELEN"
-				),
-				_react2["default"].createElement(
-					"option",
-					{ value: "Option 3" },
-					"7 DE AGOSTO"
-				)
-			),
-			_react2["default"].createElement(
-				"select",
-				{ className: "u-full-width", id: "barrio" },
-				_react2["default"].createElement(
-					"option",
-					{ value: "Option 1" },
-					"Temporalidad"
-				),
-				_react2["default"].createElement(
-					"option",
-					{ value: "Option 2" },
-					"existe"
-				),
-				_react2["default"].createElement(
-					"option",
-					{ value: "Option 3" },
-					"ya no existe"
-				)
-			)
-		);
-	}
+var _SearchDropdown2 = _interopRequireDefault(_SearchDropdown);
+
+var _superagent = require('superagent');
+
+var _superagent2 = _interopRequireDefault(_superagent);
+
+var _reactSelect = require('react-select');
+
+var _reactSelect2 = _interopRequireDefault(_reactSelect);
+
+var Navigation = _react2['default'].createClass({
+  displayName: 'Navigation',
+
+  getInitialState: function getInitialState() {
+
+    return { localidades: null, localidad: null, barrio: null, barrios: null };
+  },
+  componentDidMount: function componentDidMount() {
+    _superagent2['default'].get('/api/localidades').query({ bbox: true }).end((function (err, res) {
+      console.log(res.body);
+      // this.initSitios(res.body);
+      this.setState({ localidades: res.body });
+    }).bind(this));
+  },
+  updateBarrioList: function updateBarrioList(index) {
+    if (index != this.state.localidad) {
+      this.setState({ localidad: index, barrio: null });
+      this.props.setBounds(this.state.localidades[index].bbox);
+      var code = this.state.localidades[index].properties.COD_LOC_IN;
+      _superagent2['default'].get('/api/barrios').query({ code: code }).query({ bbox: true }).end((function (err, res) {
+        // console.log(res.body);
+        // this.initSitios(res.body);
+        this.setState({ barrios: res.body });
+      }).bind(this));
+    }
+  },
+  updateBarrio: function updateBarrio(index) {
+    this.setState({ barrio: index });
+    this.props.setBounds(this.state.barrios[index].bbox);
+  },
+  render: function render() {
+    var localidadOptions = [];
+    if (this.state.localidades != null) {
+      localidadOptions = this.state.localidades.map(function (obj, index) {
+        return { value: index, label: obj.properties.NOMBRE };
+      });
+      //console.log(localidadOptions);
+    }
+    var barrioOptions = [];
+    if (this.state.barrios != null) {
+      barrioOptions = this.state.barrios.map(function (obj, index) {
+        return { value: index, label: obj.properties.NOMBRE };
+      });
+
+      var options = [{ value: 'one', label: 'One' }, { value: 'two', label: 'Two' }];
+      // console.log(barrioOptions);
+    }
+    return _react2['default'].createElement(
+      'form',
+      { id: 'navigator' },
+      _react2['default'].createElement('input', { className: 'u-full-width', type: 'text', placeholder: 'Buscar..', id: 'exampleEmailInput' }),
+      _react2['default'].createElement(_reactSelect2['default'], {
+        name: 'form-field-name',
+        searchPromptText: 'Localidad',
+        placeholder: 'Localidad',
+        options: localidadOptions,
+        value: this.state.localidad,
+        onChange: this.updateBarrioList
+      }),
+      _react2['default'].createElement(_reactSelect2['default'], {
+        name: 'form-field-name',
+        searchPromptText: 'Barrio',
+        placeholder: 'Barrio',
+        value: this.state.barrio,
+        options: barrioOptions,
+        onChange: this.updateBarrio
+      })
+    );
+  }
 
 });
 
-exports["default"] = Navigation;
-module.exports = exports["default"];
+exports['default'] = Navigation;
+module.exports = exports['default'];
 
-},{"react":"react"}],17:[function(require,module,exports){
+},{"./SearchDropdown":21,"react":"react","react-select":96,"superagent":122}],18:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -1604,7 +1918,7 @@ var PatrimonioForm = _react2['default'].createClass({
 exports['default'] = PatrimonioForm;
 module.exports = exports['default'];
 
-},{"./Pregunta":18,"./Words":21,"react":"react"}],18:[function(require,module,exports){
+},{"./Pregunta":19,"./Words":23,"react":"react"}],19:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -1689,7 +2003,7 @@ var Pregunta = _react2["default"].createClass({
 exports["default"] = Pregunta;
 module.exports = exports["default"];
 
-},{"react":"react"}],19:[function(require,module,exports){
+},{"react":"react"}],20:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -1717,7 +2031,78 @@ var Projeccion = _react2['default'].createClass({
 exports['default'] = Projeccion;
 module.exports = exports['default'];
 
-},{"./BaseMap":5,"react":"react"}],20:[function(require,module,exports){
+},{"./BaseMap":5,"react":"react"}],21:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
+
+var _react = require('react');
+
+var _react2 = _interopRequireDefault(_react);
+
+var SearchDropdown = _react2["default"].createClass({
+  displayName: "SearchDropdown",
+
+  handleChange: function handleChange(e) {
+    var children;
+    // console.log(event.target);
+    //this.setValue(event.currentTarget.name);
+    // var result = this.props.options.filter(function( obj ) {
+    //   console.log(obj);
+    //   return obj.value == e.target.value;
+    // });
+    //console.log(e.target.value);
+    //this.setValue(e.target.value);
+    if (this.props.callback) {
+      this.props.callback(e.target.value);
+    }
+    // if(e.target.value!="default"){
+    //   children = this.props.options[e.target.value].children;
+    // }
+    //   console.log("changed "+ e.target.id);
+    //   this.props.changeValue(e.target.id, e.target.value, children);
+  },
+  render: function render() {
+
+    var dropdown = this.props.options.map(function (obj) {
+
+      return _react2["default"].createElement(
+        "option",
+        { value: obj.value },
+        obj.label
+      );
+    });
+    dropdown.unshift(_react2["default"].createElement(
+      "option",
+      { value: "default" },
+      "Seleccionar uno..."
+    ));
+    //console.log(this.props);
+    return _react2["default"].createElement(
+      "div",
+      null,
+      _react2["default"].createElement(
+        "label",
+        null,
+        this.props.label
+      ),
+      _react2["default"].createElement(
+        "select",
+        { value: this.props.value, onChange: this.handleChange },
+        dropdown
+      )
+    );
+  }
+
+});
+exports["default"] = SearchDropdown;
+module.exports = exports["default"];
+
+},{"react":"react"}],22:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -1772,7 +2157,7 @@ var Web = _react2['default'].createClass({
 exports['default'] = Web;
 module.exports = exports['default'];
 
-},{"./Intro":12,"./Main":13,"react":"react"}],21:[function(require,module,exports){
+},{"./Intro":13,"./Main":14,"react":"react"}],23:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -1826,7 +2211,7 @@ var Words = _react2['default'].createClass({
 exports['default'] = Words;
 module.exports = exports['default'];
 
-},{"react":"react","react-tap-event-plugin":96}],22:[function(require,module,exports){
+},{"react":"react","react-tap-event-plugin":104}],24:[function(require,module,exports){
 module.exports=[
 	{
 		"name": "monumental",
@@ -1926,94 +2311,10 @@ module.exports=[
 		]
 	}
 ]
-},{}],23:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 module.exports={
-  "version": 7,
+  "version": 8,
   "name": "Light",
-  "constants": {
-    "@road-motorway-width": {
-      "base": 1,
-      "stops": [[3, 0.5], [9, 1.25], [20, 10]]
-    },
-    "@road-width-minor": {
-      "base": 1,
-      "stops": [[14, 0.5], [18, 12]]
-    },
-    "@sans_md": "DIN Offc Pro Medium, Arial Unicode MS Bold",
-    "@admin-2-boundary": {
-      "base": 1,
-      "stops": [[3, 0.5], [10, 2]]
-    },
-    "@snow": "#fff",
-    "@label-park": "#4f4f4f",
-    "@road-major-width": {
-      "base": 1.4,
-      "stops": [[6, 0.5], [20, 30]]
-    },
-    "@color-1": {
-      "base": 1,
-      "stops": [[0, "#393939"], [20, "#393939"]]
-    },
-    "@road-minor": "#efefef",
-    "@road-street-width": {
-      "base": 1.55,
-      "stops": [[4, 0.25], [20, 20]]
-    },
-    "@rail-track-width": {
-      "base": 1.5,
-      "stops": [[14, 4], [20, 8]]
-    },
-    "@building-outline": "#c0c0c0",
-    "@park": "#e4e4e4",
-    "@rail-width": {
-      "base": 1.5,
-      "stops": [[14, 0.5], [20, 1]]
-    },
-    "@land": "#eee",
-    "@name": "{name_en}",
-    "@road-major": "#fff",
-    "@wood": "#dcdcdc",
-    "@number-2": {
-      "base": 1.5,
-      "stops": [[12.5, 0.3], [14, 2], [18, 18]]
-    },
-    "@sans_bd": "DIN Offc Pro Bold, Arial Unicode MS Bold",
-    "@scrub": "#e3e3e3",
-    "@crop": "#ececec",
-    "@label-waterway": "#929292",
-    "@road-high-z-fadein": {
-      "base": 1,
-      "stops": [[5, 0], [5.5, 1]]
-    },
-    "@sans": "DIN Offc Pro Regular, Arial Unicode MS Regular",
-    "@motorway-width": {
-      "base": 1.5,
-      "stops": [[5, 0.75], [18, 32]]
-    },
-    "@label": "#666",
-    "@label-halo": "#fff",
-    "@grass": "#e5e5e5",
-    "@water": "#d6d6d6",
-    "@state-label": {
-      "base": 1,
-      "stops": [[0, "#929292"], [20, "#929292"]]
-    },
-    "@label-road": "#929292",
-    "@label-secondary": "#5a5a5a",
-    "@building-fill": "#cbcbcb",
-    "@street-width": {
-      "base": 1.5,
-      "stops": [[12.5, 0.5], [14, 2], [18, 18]]
-    },
-    "@path-width": {
-      "base": 1.5,
-      "stops": [[15, 1], [18, 4]]
-    },
-    "@road-main-width": {
-      "base": 1.5,
-      "stops": [[6, 0.5], [18, 26]]
-    }
-  },
   "sources": {
     "mapbox": {
       "url": "mapbox://mapbox.mapbox-streets-v6",
@@ -2024,1638 +2325,3742 @@ module.exports={
       "type": "vector"
     }
   },
-  "sprite": "https://www.mapbox.com/mapbox-gl-styles/sprites/light",
-  "glyphs": "mapbox://fontstack/{fontstack}/{range}.pbf",
-  "layers": [{
-    "id": "background",
-    "type": "background",
-    "layout": {
-      "visibility": "visible"
-    },
-    "paint": {
-      "background-color": "@land"
-    }
-  }, {
-    "id": "landcover_snow",
-    "type": "fill",
-    "source": "mapbox://mapbox.mapbox-terrain-v2",
-    "source-layer": "landcover",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", ["==", "class", "snow"]],
-    "layout": {
-      "visibility": "visible"
-    },
-    "paint": {
-      "fill-color": "@snow",
-      "fill-opacity": 0.5
-    }
-  }, {
-    "id": "landcover_crop",
-    "type": "fill",
-    "source": "mapbox://mapbox.mapbox-terrain-v2",
-    "source-layer": "landcover",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", ["==", "class", "crop"]],
-    "layout": {
-      "visibility": "visible"
-    },
-    "paint": {
-      "fill-color": "@crop",
-      "fill-opacity": 0.5
-    }
-  }, {
-    "id": "landcover_grass",
-    "type": "fill",
-    "source": "mapbox://mapbox.mapbox-terrain-v2",
-    "source-layer": "landcover",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", ["==", "class", "grass"]],
-    "layout": {
-      "visibility": "visible"
-    },
-    "paint": {
-      "fill-color": "@grass",
-      "fill-opacity": 0.5
-    }
-  }, {
-    "id": "landcover_scrub",
-    "type": "fill",
-    "source": "mapbox://mapbox.mapbox-terrain-v2",
-    "source-layer": "landcover",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", ["==", "class", "scrub"]],
-    "layout": {
-      "visibility": "visible"
-    },
-    "paint": {
-      "fill-color": "@scrub",
-      "fill-opacity": 0.5
-    }
-  }, {
-    "id": "landcover_wood",
-    "type": "fill",
-    "source": "mapbox://mapbox.mapbox-terrain-v2",
-    "source-layer": "landcover",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", ["==", "class", "wood"]],
-    "layout": {
-      "visibility": "visible"
-    },
-    "paint": {
-      "fill-color": "@wood",
-      "fill-opacity": 0.5
-    }
-  }, {
-    "id": "landuse_industrial",
-    "type": "fill",
-    "source": "mapbox",
-    "source-layer": "landuse",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", ["==", "class", "industrial"], ["==", "$type", "Polygon"]],
-    "layout": {
-      "visibility": "visible"
-    },
-    "paint": {
-      "fill-color": "#fff",
-      "fill-opacity": 0.5
-    }
-  }, {
-    "id": "landuse_park",
-    "type": "fill",
-    "source": "mapbox",
-    "source-layer": "landuse",
-    "filter": ["all", ["==", "class", "park"]],
-    "layout": {
-      "visibility": "visible"
-    },
-    "paint": {
-      "fill-color": "@park"
-    }
-  }, {
-    "id": "landuse_wood",
-    "type": "fill",
-    "source": "mapbox",
-    "source-layer": "landuse",
-    "filter": ["all", ["==", "class", "wood"]],
-    "layout": {
-      "visibility": "visible"
-    },
-    "paint": {
-      "fill-color": "#e0e0e0"
-    }
-  }, {
-    "id": "hillshade_highlight_bright",
-    "type": "fill",
-    "source": "mapbox://mapbox.mapbox-terrain-v2",
-    "source-layer": "hillshade",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", ["==", "level", 94]],
-    "layout": {
-      "visibility": "visible"
-    },
-    "paint": {
-      "fill-color": "#fff",
-      "fill-opacity": {
-        "base": 1,
-        "stops": [[15, 0.15], [17, 0.05]]
-      }
-    }
-  }, {
-    "id": "hillshade_highlight_med",
-    "type": "fill",
-    "source": "mapbox://mapbox.mapbox-terrain-v2",
-    "source-layer": "hillshade",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", ["==", "level", 90]],
-    "layout": {
-      "visibility": "visible"
-    },
-    "paint": {
-      "fill-color": "#fff",
-      "fill-opacity": {
-        "base": 1,
-        "stops": [[15, 0.15], [17, 0.05]]
-      }
-    }
-  }, {
-    "id": "hillshade_shadow_faint",
-    "type": "fill",
-    "source": "mapbox://mapbox.mapbox-terrain-v2",
-    "source-layer": "hillshade",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", ["==", "level", 89]],
-    "layout": {
-      "visibility": "visible"
-    },
-    "paint": {
-      "fill-color": "#666",
-      "fill-opacity": {
-        "base": 1,
-        "stops": [[14, 0.06], [17, 0.01]]
-      }
-    }
-  }, {
-    "id": "hillshade_shadow_med",
-    "type": "fill",
-    "source": "mapbox://mapbox.mapbox-terrain-v2",
-    "source-layer": "hillshade",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", ["==", "level", 78]],
-    "layout": {
-      "visibility": "visible"
-    },
-    "paint": {
-      "fill-color": "#666",
-      "fill-opacity": {
-        "base": 1,
-        "stops": [[14, 0.06], [17, 0.01]]
-      }
-    }
-  }, {
-    "id": "hillshade_shadow_dark",
-    "type": "fill",
-    "source": "mapbox://mapbox.mapbox-terrain-v2",
-    "source-layer": "hillshade",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", ["==", "level", 67]],
-    "layout": {
-      "visibility": "visible"
-    },
-    "paint": {
-      "fill-color": "#888888",
-      "fill-opacity": {
-        "base": 1,
-        "stops": [[14, 0.06], [17, 0.01]]
-      }
-    }
-  }, {
-    "id": "hillshade_shadow_extreme",
-    "type": "fill",
-    "source": "mapbox://mapbox.mapbox-terrain-v2",
-    "source-layer": "hillshade",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", ["==", "level", 56]],
-    "layout": {
-      "visibility": "visible"
-    },
-    "paint": {
-      "fill-color": "#999",
-      "fill-opacity": {
-        "base": 1,
-        "stops": [[14, 0.06], [17, 0.01]]
-      }
-    }
-  }, {
-    "id": "building",
-    "type": "fill",
-    "source": "mapbox",
-    "source-layer": "building",
-    "minzoom": 15,
-    "paint": {
-      "fill-outline-color": "@building-outline",
-      "fill-opacity": {
-        "base": 1,
-        "stops": [[15, 0], [16.5, 1]]
+  "sprite": "mapbox://sprites/mapbox/light-v8",
+  "glyphs": "mapbox://fonts/mapbox/{fontstack}/{range}.pbf",
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "layout": {
+        "visibility": "visible"
       },
-      "fill-antialias": true,
-      "fill-color": "@building-fill"
-    }
-  }, {
-    "id": "waterway",
-    "type": "line",
-    "source": "mapbox",
-    "source-layer": "waterway",
-    "filter": ["all", ["==", "$type", "LineString"], ["in", "class", "river", "canal"]],
-    "paint": {
-      "line-color": "@water",
-      "line-width": {
-        "base": 1,
-        "stops": [[6, 0.25], [20, 6]]
-      }
-    }
-  }, {
-    "id": "waterway_stream",
-    "type": "line",
-    "source": "mapbox",
-    "source-layer": "waterway",
-    "filter": ["all", ["==", "$type", "LineString"], ["in", "class", "stream"]],
-    "paint": {
-      "line-color": "@water",
-      "line-width": {
-        "base": 1,
-        "stops": [[13, 0.75], [20, 4]]
-      }
-    }
-  }, {
-    "id": "water",
-    "type": "fill",
-    "source": "mapbox",
-    "source-layer": "water",
-    "layout": {
-      "visibility": "visible"
-    },
-    "paint": {
-      "fill-color": "@water"
-    }
-  }, {
-    "id": "aeroway_runway",
-    "type": "line",
-    "source": "mapbox",
-    "source-layer": "aeroway",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", ["==", "$type", "LineString"], ["==", "type", "runway"]],
-    "layout": {
-      "line-join": "miter",
-      "visibility": "visible"
-    },
-    "paint": {
-      "line-width": {
-        "base": 1.15,
-        "stops": [[11, 3], [20, 32]]
-      },
-      "line-color": "#fff",
-      "line-opacity": {
-        "base": 1,
-        "stops": [[9, 0.5], [11, 1]]
-      }
-    }
-  }, {
-    "id": "aeroway_taxiway",
-    "type": "line",
-    "source": "mapbox",
-    "source-layer": "aeroway",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", ["==", "$type", "LineString"], ["==", "type", "taxiway"]],
-    "layout": {
-      "line-join": "miter"
-    },
-    "paint": {
-      "line-width": {
-        "base": 1.15,
-        "stops": [[10, 0.25], [11, 1], [20, 8]]
-      },
-      "line-color": "#fff"
-    }
-  }, {
-    "id": "tunnel_minor",
-    "type": "line",
-    "source": "mapbox",
-    "source-layer": "tunnel",
-    "filter": ["all", ["==", "$type", "LineString"], ["in", "class", "motorway_link", "street", "street_limited", "service", "driveway", "path"]],
-    "paint": {
-      "line-color": "@road-minor",
-      "line-width": "@road-street-width",
-      "line-dasharray": [0.36, 0.18]
-    }
-  }, {
-    "id": "tunnel_major",
-    "type": "line",
-    "source": "mapbox",
-    "source-layer": "tunnel",
-    "filter": ["all", ["==", "$type", "LineString"], ["in", "class", "motorway", "main"]],
-    "paint": {
-      "line-color": "@road-major",
-      "line-width": "@road-major-width",
-      "line-dasharray": [0.28, 0.14]
-    }
-  }, {
-    "id": "road-path",
-    "type": "line",
-    "source": "mapbox",
-    "source-layer": "road",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", ["==", "class", "path"]],
-    "layout": {
-      "visibility": "visible"
-    },
-    "paint": {
-      "line-color": "@road-major",
-      "line-width": {
-        "base": 1,
-        "stops": [[15, 1], [18, 4]]
-      }
-    }
-  }, {
-    "id": "road-street-low-zoom",
-    "type": "line",
-    "source": "mapbox",
-    "source-layer": "road",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", ["in", "class", "street", "street_limited"], ["==", "$type", "LineString"]],
-    "layout": {
-      "visibility": "visible",
-      "line-cap": "round",
-      "line-join": "round"
-    },
-    "paint": {
-      "line-color": "@road-major",
-      "line-width": "@street-width",
-      "line-opacity": {
-        "base": 1,
-        "stops": [[11.5, 0], [12, 1]]
-      }
-    }
-  }, {
-    "id": "road-service-driveway",
-    "type": "line",
-    "source": "mapbox",
-    "source-layer": "road",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", ["in", "class", "service", "driveway"]],
-    "layout": {
-      "visibility": "visible",
-      "line-cap": "round",
-      "line-join": "round"
-    },
-    "paint": {
-      "line-color": "@road-major",
-      "line-width": "@road-width-minor"
-    }
-  }, {
-    "id": "road-motorway_link",
-    "type": "line",
-    "source": "mapbox",
-    "source-layer": "road",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", ["in", "class", "motorway_link"]],
-    "layout": {
-      "visibility": "visible",
-      "line-cap": "round",
-      "line-join": "round"
-    },
-    "paint": {
-      "line-color": "@road-major",
-      "line-width": "@street-width"
-    }
-  }, {
-    "id": "road-street_limited",
-    "type": "line",
-    "source": "mapbox",
-    "source-layer": "road",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", ["==", "class", "street_limited"], ["==", "$type", "LineString"]],
-    "layout": {
-      "visibility": "visible",
-      "line-cap": "round",
-      "line-join": "round"
-    },
-    "paint": {
-      "line-color": "@road-major",
-      "line-width": "@street-width"
-    }
-  }, {
-    "id": "road-street",
-    "type": "line",
-    "source": "mapbox",
-    "source-layer": "road",
-    "minzoom": 14,
-    "maxzoom": 22,
-    "filter": ["all", ["in", "class", "street"], ["==", "$type", "LineString"]],
-    "layout": {
-      "line-cap": "round",
-      "line-join": "round",
-      "visibility": "visible"
-    },
-    "paint": {
-      "line-color": "@road-major",
-      "line-width": "@number-2",
-      "line-opacity": 1
-    }
-  }, {
-    "id": "road-main",
-    "type": "line",
-    "source": "mapbox",
-    "source-layer": "road",
-    "filter": ["all", ["==", "$type", "LineString"], ["in", "class", "main"]],
-    "layout": {
-      "line-cap": "round",
-      "line-join": "round",
-      "visibility": "visible"
-    },
-    "paint": {
-      "line-color": "@road-major",
-      "line-width": "@road-main-width",
-      "line-opacity": "@road-high-z-fadein"
-    }
-  }, {
-    "id": "road-trunk",
-    "type": "line",
-    "source": "mapbox",
-    "source-layer": "road",
-    "filter": ["all", ["in", "class", "main"], ["==", "type", "trunk"]],
-    "layout": {
-      "line-cap": "round",
-      "line-join": "round",
-      "visibility": "visible"
-    },
-    "paint": {
-      "line-color": "@road-major",
-      "line-width": "@motorway-width",
-      "line-opacity": 1
-    }
-  }, {
-    "id": "road-motorway",
-    "type": "line",
-    "source": "mapbox",
-    "source-layer": "road",
-    "minzoom": 0,
-    "filter": ["all", ["in", "class", "motorway"]],
-    "layout": {
-      "line-cap": "round",
-      "line-join": "round",
-      "visibility": "visible"
-    },
-    "paint": {
-      "line-color": "@road-major",
-      "line-width": "@motorway-width",
-      "line-opacity": "@road-high-z-fadein"
-    }
-  }, {
-    "id": "road-rail",
-    "type": "line",
-    "source": "mapbox",
-    "source-layer": "road",
-    "minzoom": 13,
-    "filter": ["all", ["in", "class", "major_rail", "minor_rail"]],
-    "layout": {
-      "line-cap": "round",
-      "line-join": "round",
-      "visibility": "visible"
-    },
-    "paint": {
-      "line-color": "@road-major",
-      "line-width": "@rail-width",
-      "line-opacity": 1
-    }
-  }, {
-    "id": "road-rail-tracks",
-    "type": "line",
-    "source": "mapbox",
-    "source-layer": "road",
-    "minzoom": 13,
-    "filter": ["all", ["in", "class", "major_rail", "minor_rail"]],
-    "layout": {
-      "line-cap": "butt",
-      "line-join": "miter",
-      "visibility": "visible"
-    },
-    "paint": {
-      "line-color": "@road-major",
-      "line-width": "@rail-track-width",
-      "line-opacity": 1
-    }
-  }, {
-    "id": "bridge_minor_case",
-    "type": "line",
-    "source": "mapbox",
-    "source-layer": "bridge",
-    "filter": ["all", ["==", "$type", "LineString"], ["in", "class", "motorway_link", "street", "street_limited", "service", "driveway", "path"]],
-    "paint": {
-      "line-color": "@land",
-      "line-width": {
-        "base": 1.6,
-        "stops": [[12, 0.5], [20, 10]]
-      },
-      "line-gap-width": "@road-street-width"
-    }
-  }, {
-    "id": "bridge-path",
-    "type": "line",
-    "source": "mapbox",
-    "source-layer": "bridge",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", ["==", "class", "path"]],
-    "layout": {
-      "visibility": "visible",
-      "line-cap": "round",
-      "line-join": "round"
-    },
-    "paint": {
-      "line-color": "@road-minor",
-      "line-width": "@path-width"
-    }
-  }, {
-    "id": "bridge-street-low-zoom",
-    "type": "line",
-    "source": "mapbox",
-    "source-layer": "bridge",
-    "minzoom": 11,
-    "maxzoom": 14.1,
-    "filter": ["all", ["in", "class", "street", "street_limited"], ["==", "$type", "LineString"]],
-    "layout": {
-      "visibility": "visible",
-      "line-cap": "round",
-      "line-join": "round"
-    },
-    "paint": {
-      "line-color": "@road-minor",
-      "line-width": "@street-width",
-      "line-opacity": {
-        "base": 1,
-        "stops": [[11.5, 0], [12, 1]]
-      }
-    }
-  }, {
-    "id": "bridge-motorway_link",
-    "type": "line",
-    "source": "mapbox",
-    "source-layer": "bridge",
-    "minzoom": 10,
-    "maxzoom": 22,
-    "filter": ["all", ["in", "class", "motorway_link"], ["==", "$type", "LineString"]],
-    "layout": {
-      "visibility": "visible",
-      "line-cap": "round",
-      "line-join": "round"
-    },
-    "paint": {
-      "line-color": "@road-major",
-      "line-width": "@street-width",
-      "line-opacity": 1
-    }
-  }, {
-    "id": "bridge-street_limited",
-    "type": "line",
-    "source": "mapbox",
-    "source-layer": "bridge",
-    "minzoom": 14,
-    "maxzoom": 22,
-    "filter": ["all", ["in", "class", "street_limited"], ["==", "$type", "LineString"]],
-    "layout": {
-      "visibility": "visible",
-      "line-cap": "round",
-      "line-join": "round"
-    },
-    "paint": {
-      "line-color": "@road-major",
-      "line-width": "@street-width",
-      "line-opacity": 1
-    }
-  }, {
-    "id": "bridge-street",
-    "type": "line",
-    "source": "mapbox",
-    "source-layer": "bridge",
-    "minzoom": 14,
-    "maxzoom": 22,
-    "filter": ["all", ["in", "class", "street"]],
-    "layout": {
-      "visibility": "visible",
-      "line-cap": "round",
-      "line-join": "round"
-    },
-    "paint": {
-      "line-color": "@road-major",
-      "line-width": "@street-width",
-      "line-opacity": 1
-    }
-  }, {
-    "id": "bridge-main",
-    "type": "line",
-    "source": "mapbox",
-    "source-layer": "bridge",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", ["in", "class", "main"], ["!=", "type", "trunk"]],
-    "layout": {
-      "visibility": "visible",
-      "line-cap": "round",
-      "line-join": "round"
-    },
-    "paint": {
-      "line-color": "@road-major",
-      "line-width": "@road-main-width",
-      "line-opacity": "@road-high-z-fadein"
-    }
-  }, {
-    "id": "bridge-trunk",
-    "type": "line",
-    "source": "mapbox",
-    "source-layer": "bridge",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", ["in", "class", "main"], ["==", "type", "trunk"]],
-    "layout": {
-      "visibility": "visible",
-      "line-cap": "round",
-      "line-join": "round"
-    },
-    "paint": {
-      "line-color": "@road-major",
-      "line-width": "@road-motorway-width",
-      "line-opacity": 1
-    }
-  }, {
-    "id": "bridge-motorway",
-    "type": "line",
-    "source": "mapbox",
-    "source-layer": "bridge",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", ["in", "class", "motorway"]],
-    "layout": {
-      "visibility": "visible",
-      "line-cap": "round",
-      "line-join": "round"
-    },
-    "paint": {
-      "line-color": "@road-major",
-      "line-width": "@road-motorway-width",
-      "line-opacity": 1
-    }
-  }, {
-    "id": "bridge-rail",
-    "type": "line",
-    "source": "mapbox",
-    "source-layer": "bridge",
-    "minzoom": 13,
-    "maxzoom": 22,
-    "filter": ["all", ["in", "class", "major_rail", "minor_rail"]],
-    "layout": {
-      "visibility": "visible",
-      "line-cap": "butt",
-      "line-join": "miter",
-      "line-round-limit": 2
-    },
-    "paint": {
-      "line-color": "@road-major",
-      "line-width": "@rail-width",
-      "line-opacity": 1
-    }
-  }, {
-    "id": "bridge-rail-tracks",
-    "type": "line",
-    "source": "mapbox",
-    "source-layer": "bridge",
-    "minzoom": 14,
-    "maxzoom": 22,
-    "filter": ["all", ["in", "class", "major_rail", "minor_rail"]],
-    "layout": {
-      "visibility": "visible",
-      "line-cap": "butt",
-      "line-join": "miter",
-      "line-round-limit": 2
-    },
-    "paint": {
-      "line-color": "@road-major",
-      "line-width": "@rail-track-width",
-      "line-opacity": 1
-    }
-  }, {
-    "id": "bridge-rail-tracks_copy",
-    "type": "line",
-    "source": "mapbox",
-    "source-layer": "bridge",
-    "minzoom": 14,
-    "maxzoom": 22,
-    "filter": ["all", ["in", "class", "aerialway"]],
-    "layout": {
-      "visibility": "visible",
-      "line-cap": "butt",
-      "line-join": "miter",
-      "line-round-limit": 2
-    },
-    "paint": {
-      "line-color": "@road-major",
-      "line-width": "@rail-width",
-      "line-opacity": 1
-    }
-  }, {
-    "id": "admin-3-4-boundaries-bg",
-    "type": "line",
-    "source": "mapbox",
-    "source-layer": "admin",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", [">=", "admin_level", 3], ["==", "maritime", 0]],
-    "layout": {
-      "visibility": "visible",
-      "line-join": "bevel"
-    },
-    "paint": {
-      "line-width": {
-        "base": 1,
-        "stops": [[3, 3.5], [12, 6]]
-      },
-      "line-opacity": {
-        "base": 1,
-        "stops": [[2, 0], [5, 0.75]]
-      },
-      "line-color": "#fff"
-    }
-  }, {
-    "id": "admin-2-boundaries-bg",
-    "type": "line",
-    "source": "mapbox",
-    "source-layer": "admin",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", ["==", "admin_level", 2], ["==", "maritime", 0], ["==", "disputed", 2]],
-    "layout": {
-      "visibility": "visible",
-      "line-join": "miter"
-    },
-    "paint": {
-      "line-color": "#fff",
-      "line-opacity": {
-        "base": 1,
-        "stops": [[3, 0], [4, 0.75]]
-      },
-      "line-width": {
-        "base": 1,
-        "stops": [[2, 3.5], [10, 10]]
-      }
-    }
-  }, {
-    "id": "admin-3-4-boundaries",
-    "type": "line",
-    "source": "mapbox",
-    "source-layer": "admin",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", [">=", "admin_level", 3], ["==", "maritime", 0]],
-    "layout": {
-      "visibility": "visible",
-      "line-join": "miter"
-    },
-    "paint": {
-      "line-color": "#b5b5b5",
-      "line-opacity": {
-        "base": 1,
-        "stops": [[2, 0], [3, 1]]
-      },
-      "line-width": {
-        "base": 1,
-        "stops": [[3, 0.5], [12, 2]]
-      },
-      "line-dasharray": {
-        "base": 1,
-        "stops": [[4, [2, 0]], [5, [2, 2, 6, 2]]]
-      }
-    }
-  }, {
-    "id": "admin-2-boundaries",
-    "type": "line",
-    "source": "mapbox",
-    "source-layer": "admin",
-    "minzoom": 1,
-    "maxzoom": 22,
-    "filter": ["all", ["==", "admin_level", 2], ["==", "maritime", 0], ["==", "disputed", 0]],
-    "layout": {
-      "visibility": "visible",
-      "line-join": "round",
-      "line-cap": "round"
-    },
-    "paint": {
-      "line-color": "#c0c0c0",
-      "line-opacity": 1,
-      "line-width": "@admin-2-boundary"
-    }
-  }, {
-    "id": "country-label-lg",
-    "type": "symbol",
-    "source": "mapbox",
-    "source-layer": "country_label",
-    "maxzoom": 12,
-    "filter": ["all", ["in", "scalerank", 1, 2]],
-    "layout": {
-      "text-field": "@name",
-      "text-font": "DIN Offc Pro Medium, Arial Unicode MS Regular",
-      "text-max-size": 18,
-      "text-max-width": 6
-    },
-    "paint": {
-      "text-color": {
-        "base": 1,
-        "stops": [[0, "#444"], [10, "#888"]]
-      },
-      "text-halo-color": "@label-halo",
-      "text-halo-width": 1,
-      "text-halo-blur": 1,
-      "text-size": {
-        "stops": [[1, 9], [5, 18]],
-        "base": 0.9
-      }
-    }
-  }, {
-    "id": "country-label-md",
-    "type": "symbol",
-    "source": "mapbox",
-    "source-layer": "country_label",
-    "minzoom": 1,
-    "maxzoom": 8,
-    "filter": ["all", ["in", "scalerank", 3, 4]],
-    "layout": {
-      "text-field": {
-        "base": 1,
-        "stops": [[0, "{code}"], [2, "{name_en}"]]
-      },
-      "text-font": "DIN Offc Pro Medium, Arial Unicode MS Regular",
-      "text-max-size": 18,
-      "text-max-width": 7
-    },
-    "paint": {
-      "text-color": {
-        "base": 1,
-        "stops": [[0, "#444"], [10, "#888"]]
-      },
-      "text-halo-color": "@label-halo",
-      "text-halo-width": 1,
-      "text-halo-blur": 1,
-      "text-size": {
-        "stops": [[2, 8], [7, 18]],
-        "base": 0.9
-      }
-    }
-  }, {
-    "id": "country-label-sm",
-    "type": "symbol",
-    "source": "mapbox",
-    "source-layer": "country_label",
-    "minzoom": 1,
-    "maxzoom": 10,
-    "filter": ["all", [">=", "scalerank", 5]],
-    "layout": {
-      "text-field": "{name_en}",
-      "text-font": "DIN Offc Pro Medium, Arial Unicode MS Regular",
-      "text-max-size": 18,
-      "text-max-width": 7
-    },
-    "paint": {
-      "text-color": {
-        "base": 1,
-        "stops": [[0, "#444"], [10, "#888"]]
-      },
-      "text-halo-color": "@label-halo",
-      "text-halo-width": 1,
-      "text-halo-blur": 1,
-      "text-size": {
-        "stops": [[3, 8], [9, 18]],
-        "base": 0.9
-      }
-    }
-  }, {
-    "id": "state-label-lg",
-    "type": "symbol",
-    "source": "mapbox",
-    "source-layer": "state_label",
-    "minzoom": 3,
-    "maxzoom": 7,
-    "filter": ["all", [">=", "area", 80000]],
-    "layout": {
-      "text-transform": "uppercase",
-      "visibility": "visible",
-      "text-field": {
-        "base": 1,
-        "stops": [[0, "{abbr}"], [4, "{name_en}"]]
-      },
-      "text-font": "DIN Offc Pro Bold, Arial Unicode MS Regular",
-      "text-max-size": 10,
-      "text-letter-spacing": 0.15,
-      "text-max-width": 7
-    },
-    "paint": {
-      "text-color": "@state-label",
-      "text-size": {
-        "base": 1,
-        "stops": [[4, 9], [7, 18]]
-      }
-    }
-  }, {
-    "id": "marine_label_line_1",
-    "type": "symbol",
-    "source": "mapbox",
-    "source-layer": "marine_label",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", ["==", "$type", "LineString"], ["==", "labelrank", 1]],
-    "layout": {
-      "text-max-width": 15,
-      "visibility": "visible",
-      "symbol-placement": "line",
-      "text-field": "@name",
-      "text-max-size": 30,
-      "text-line-height": 1.2,
-      "text-letter-spacing": 0.4,
-      "text-font": "DIN Offc Pro Medium, Arial Unicode MS Regular"
-    },
-    "paint": {
-      "text-color": "@label",
-      "text-size": {
-        "base": 1,
-        "stops": [[3, 25], [4, 30]]
-      },
-      "text-opacity": 0.25
-    }
-  }, {
-    "id": "marine_label_line_2",
-    "type": "symbol",
-    "source": "mapbox",
-    "source-layer": "marine_label",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", ["==", "$type", "LineString"], ["==", "labelrank", 2]],
-    "layout": {
-      "text-max-width": 15,
-      "visibility": "visible",
-      "symbol-placement": "line",
-      "text-field": "@name",
-      "text-max-size": 24,
-      "text-line-height": 1.2,
-      "text-letter-spacing": 0,
-      "text-font": "DIN Offc Pro Medium, Arial Unicode MS Regular"
-    },
-    "paint": {
-      "text-color": "@label",
-      "text-size": {
-        "base": 1,
-        "stops": [[3, 14], [5, 24]]
-      },
-      "text-opacity": 0.25
-    }
-  }, {
-    "id": "marine_label_line_3",
-    "type": "symbol",
-    "source": "mapbox",
-    "source-layer": "marine_label",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", ["==", "$type", "LineString"], ["==", "labelrank", 3]],
-    "layout": {
-      "text-max-width": 15,
-      "visibility": "visible",
-      "symbol-placement": "line",
-      "text-field": "@name",
-      "text-max-size": 18,
-      "text-line-height": 1.2,
-      "text-letter-spacing": 0,
-      "text-font": "DIN Offc Pro Medium, Arial Unicode MS Regular"
-    },
-    "paint": {
-      "text-color": "@label",
-      "text-size": {
-        "base": 1,
-        "stops": [[3, 13], [5, 18]]
-      },
-      "text-opacity": 0.25
-    }
-  }, {
-    "id": "marine_label_line_other",
-    "type": "symbol",
-    "source": "mapbox",
-    "source-layer": "marine_label",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", ["==", "$type", "LineString"], ["in", "labelrank", 4, 5, 6]],
-    "layout": {
-      "text-max-width": 15,
-      "visibility": "visible",
-      "symbol-placement": "line",
-      "text-field": "@name",
-      "text-max-size": 16,
-      "text-line-height": 1.2,
-      "text-letter-spacing": 0,
-      "text-font": "DIN Offc Pro Medium, Arial Unicode MS Regular"
-    },
-    "paint": {
-      "text-color": "@label",
-      "text-size": {
-        "base": 1,
-        "stops": [[4, 12], [6, 16]]
-      },
-      "text-opacity": 0.25
-    }
-  }, {
-    "id": "marine_label_point_1",
-    "type": "symbol",
-    "source": "mapbox",
-    "source-layer": "marine_label",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", ["==", "$type", "Point"], ["==", "labelrank", 1]],
-    "layout": {
-      "text-max-width": 4,
-      "visibility": "visible",
-      "symbol-placement": "point",
-      "text-field": "@name",
-      "text-max-size": 30,
-      "text-line-height": 1.5,
-      "text-letter-spacing": 0.25,
-      "text-font": "DIN Offc Pro Medium, Arial Unicode MS Regular"
-    },
-    "paint": {
-      "text-color": "@label",
-      "text-size": {
-        "base": 1,
-        "stops": [[1, 12], [4, 30]]
-      },
-      "text-opacity": 0.25
-    }
-  }, {
-    "id": "marine_label_point_2",
-    "type": "symbol",
-    "source": "mapbox",
-    "source-layer": "marine_label",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", ["==", "$type", "Point"], ["==", "labelrank", 2]],
-    "layout": {
-      "text-max-width": 8,
-      "visibility": "visible",
-      "symbol-placement": "point",
-      "text-field": "@name",
-      "text-max-size": 24,
-      "text-line-height": 1.2,
-      "text-letter-spacing": 0,
-      "text-font": "DIN Offc Pro Medium, Arial Unicode MS Regular"
-    },
-    "paint": {
-      "text-color": "@label",
-      "text-size": {
-        "base": 1,
-        "stops": [[3, 14], [5, 24]]
-      },
-      "text-opacity": 0.25
-    }
-  }, {
-    "id": "marine_label_point_3",
-    "type": "symbol",
-    "source": "mapbox",
-    "source-layer": "marine_label",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", ["==", "$type", "Point"], ["==", "labelrank", 3]],
-    "layout": {
-      "text-max-width": 8,
-      "visibility": "visible",
-      "symbol-placement": "point",
-      "text-field": "@name",
-      "text-max-size": 18,
-      "text-line-height": 1.3,
-      "text-letter-spacing": 0.1,
-      "text-font": "DIN Offc Pro Medium, Arial Unicode MS Regular"
-    },
-    "paint": {
-      "text-color": "@label",
-      "text-size": {
-        "base": 1,
-        "stops": [[3, 13], [5, 18]]
-      },
-      "text-opacity": 0.25
-    }
-  }, {
-    "id": "marine_label_point_other",
-    "type": "symbol",
-    "source": "mapbox",
-    "source-layer": "marine_label",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", ["==", "$type", "Point"], ["in", "labelrank", 4, 5, 6]],
-    "layout": {
-      "text-max-width": 8,
-      "visibility": "none",
-      "symbol-placement": "point",
-      "text-field": "@name",
-      "text-max-size": 16,
-      "text-line-height": 1.2,
-      "text-letter-spacing": 0.1,
-      "text-font": "DIN Offc Pro Regular, Arial Unicode MS Regular"
-    },
-    "paint": {
-      "text-color": "@label",
-      "text-size": {
-        "base": 1,
-        "stops": [[4, 12], [6, 16]]
-      }
-    }
-  }, {
-    "id": "place_label_city_large_n",
-    "type": "symbol",
-    "source": "mapbox",
-    "source-layer": "place_label",
-    "maxzoom": 16,
-    "filter": ["all", ["<=", "scalerank", 1], ["in", "ldir", "N", "NE", "NW", "W"], ["==", "type", "city"]],
-    "layout": {
-      "text-field": "@name",
-      "text-font": "@sans_bd",
-      "text-max-width": 5,
-      "text-max-size": 20,
-      "text-transform": "none",
-      "text-anchor": {
-        "base": 1,
-        "stops": [[0, "bottom"], [6, "center"]]
-      },
-      "text-offset": {
-        "base": 1,
-        "stops": [[0, [0, -0.2]], [6, [0, 0]]]
-      },
-      "symbol-avoid-edges": false
-    },
-    "paint": {
-      "text-color": "@label",
-      "text-halo-color": "@label-halo",
-      "text-halo-width": 1.5,
-      "text-halo-blur": 0,
-      "text-size": {
-        "stops": [[4, 11], [10, 20]],
-        "base": 0.9
-      }
-    }
-  }, {
-    "id": "place_label_city_large_s",
-    "type": "symbol",
-    "source": "mapbox",
-    "source-layer": "place_label",
-    "maxzoom": 16,
-    "filter": ["all", ["==", "type", "city"], ["<=", "scalerank", 1], ["in", "ldir", "S", "SE", "SW", "E"]],
-    "layout": {
-      "text-field": "@name",
-      "text-font": "@sans_bd",
-      "text-max-width": 15,
-      "text-max-size": 20,
-      "text-transform": "none",
-      "text-anchor": {
-        "base": 1,
-        "stops": [[0, "top"], [6, "center"]]
-      },
-      "text-offset": {
-        "base": 1,
-        "stops": [[0, [0, 0.1]], [6, [0, 0]]]
+      "paint": {
+        "background-color": "#eee"
       }
     },
-    "paint": {
-      "text-color": "@label",
-      "text-halo-color": "@label-halo",
-      "text-halo-width": 1.5,
-      "text-halo-blur": 0,
-      "text-size": {
-        "stops": [[4, 11], [10, 20]],
-        "base": 0.9
-      }
-    }
-  }, {
-    "id": "place_label_city_medium_n",
-    "type": "symbol",
-    "source": "mapbox",
-    "source-layer": "place_label",
-    "maxzoom": 16,
-    "filter": ["all", ["==", "type", "city"], ["<=", "scalerank", 4], [">", "scalerank", 1], ["in", "ldir", "N", "W", "NW", "NE"]],
-    "layout": {
-      "text-field": "@name",
-      "text-font": "DIN Offc Pro Medium, Arial Unicode MS Bold",
-      "text-max-width": 10,
-      "text-max-size": 19,
-      "text-anchor": {
-        "base": 1,
-        "stops": [[0, "bottom"], [6, "center"]]
+    {
+      "id": "landcover_snow",
+      "type": "fill",
+      "source": "mapbox://mapbox.mapbox-terrain-v2",
+      "source-layer": "landcover",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "class",
+          "snow"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible"
       },
-      "text-offset": {
-        "base": 1,
-        "stops": [[0, [0, -0.2]], [6, [0, 0]]]
+      "paint": {
+        "fill-color": "#fff",
+        "fill-opacity": 0.5
       }
     },
-    "paint": {
-      "text-color": "@label",
-      "text-halo-color": "@label-halo",
-      "text-halo-width": 1.5,
-      "text-halo-blur": 0,
-      "text-size": {
-        "stops": [[5, 11], [12, 19]],
-        "base": 0.9
-      }
-    }
-  }, {
-    "id": "place_label_city_medium_s",
-    "type": "symbol",
-    "source": "mapbox",
-    "source-layer": "place_label",
-    "maxzoom": 16,
-    "filter": ["all", ["==", "type", "city"], ["<=", "scalerank", 4], [">", "scalerank", 1], ["in", "ldir", "S", "E", "SE", "SW"]],
-    "layout": {
-      "text-field": "@name",
-      "text-font": "DIN Offc Pro Medium, Arial Unicode MS Bold",
-      "text-max-width": 10,
-      "text-max-size": 19,
-      "text-anchor": {
-        "base": 1,
-        "stops": [[0, "top"], [6, "center"]]
+    {
+      "id": "landcover_crop",
+      "type": "fill",
+      "source": "mapbox://mapbox.mapbox-terrain-v2",
+      "source-layer": "landcover",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "class",
+          "crop"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible"
       },
-      "text-offset": {
-        "base": 1,
-        "stops": [[0, [0, 0.1]], [6, [0, 0]]]
+      "paint": {
+        "fill-color": "#ececec",
+        "fill-opacity": 0.5
       }
     },
-    "paint": {
-      "text-color": "@label",
-      "text-halo-color": "@label-halo",
-      "text-halo-width": 1.5,
-      "text-halo-blur": 0,
-      "text-size": {
-        "stops": [[5, 11], [12, 19]],
-        "base": 0.9
-      }
-    }
-  }, {
-    "id": "place_label_city_small_n",
-    "type": "symbol",
-    "source": "mapbox",
-    "source-layer": "place_label",
-    "maxzoom": 16,
-    "filter": ["all", ["==", "type", "city"], [">", "scalerank", 4], ["in", "ldir", "N", "W", "NW", "NE"]],
-    "layout": {
-      "text-field": "@name",
-      "text-font": "DIN Offc Pro Medium, Arial Unicode MS Bold",
-      "text-max-width": 10,
-      "text-max-size": 19,
-      "text-anchor": {
-        "base": 1,
-        "stops": [[0, "bottom"], [6, "center"]]
+    {
+      "id": "landcover_grass",
+      "type": "fill",
+      "source": "mapbox://mapbox.mapbox-terrain-v2",
+      "source-layer": "landcover",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "class",
+          "grass"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible"
       },
-      "text-offset": {
-        "base": 1,
-        "stops": [[0, [0, -0.2]], [6, [0, 0]]]
+      "paint": {
+        "fill-color": "#e5e5e5",
+        "fill-opacity": 0.5
       }
     },
-    "paint": {
-      "text-color": "@label",
-      "text-halo-color": "@label-halo",
-      "text-halo-width": 1.5,
-      "text-halo-blur": 0,
-      "text-size": {
-        "stops": [[6, 11], [14, 19]]
-      }
-    }
-  }, {
-    "id": "place_label_city_small_s",
-    "type": "symbol",
-    "source": "mapbox",
-    "source-layer": "place_label",
-    "maxzoom": 16,
-    "filter": ["all", ["==", "type", "city"], [">", "scalerank", 4], ["in", "ldir", "S", "E", "SE", "SW"]],
-    "layout": {
-      "text-field": "@name",
-      "text-font": "DIN Offc Pro Medium, Arial Unicode MS Bold",
-      "text-max-width": 10,
-      "text-max-size": 19,
-      "text-anchor": {
-        "base": 1,
-        "stops": [[0, "top"], [6, "center"]]
+    {
+      "id": "landcover_scrub",
+      "type": "fill",
+      "source": "mapbox://mapbox.mapbox-terrain-v2",
+      "source-layer": "landcover",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "class",
+          "scrub"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible"
       },
-      "text-offset": {
-        "base": 1,
-        "stops": [[0, [0, 0.1]], [6, [0, 0]]]
+      "paint": {
+        "fill-color": "#e3e3e3",
+        "fill-opacity": 0.5
       }
     },
-    "paint": {
-      "text-color": "@label",
-      "text-halo-color": "@label-halo",
-      "text-halo-width": 1.5,
-      "text-halo-blur": 0,
-      "text-size": {
-        "stops": [[6, 11], [14, 19]]
+    {
+      "id": "landcover_wood",
+      "type": "fill",
+      "source": "mapbox://mapbox.mapbox-terrain-v2",
+      "source-layer": "landcover",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "class",
+          "wood"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible"
+      },
+      "paint": {
+        "fill-color": "#dcdcdc",
+        "fill-opacity": 0.5
+      }
+    },
+    {
+      "id": "landuse_industrial",
+      "type": "fill",
+      "source": "mapbox",
+      "source-layer": "landuse",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "class",
+          "industrial"
+        ],
+        [
+          "==",
+          "$type",
+          "Polygon"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible"
+      },
+      "paint": {
+        "fill-color": "#fff",
+        "fill-opacity": 0.5
+      }
+    },
+    {
+      "id": "landuse_park",
+      "type": "fill",
+      "source": "mapbox",
+      "source-layer": "landuse",
+      "filter": [
+        "all",
+        [
+          "==",
+          "class",
+          "park"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible"
+      },
+      "paint": {
+        "fill-color": "#e4e4e4"
+      }
+    },
+    {
+      "id": "landuse_wood",
+      "type": "fill",
+      "source": "mapbox",
+      "source-layer": "landuse",
+      "filter": [
+        "all",
+        [
+          "==",
+          "class",
+          "wood"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible"
+      },
+      "paint": {
+        "fill-color": "#e0e0e0"
+      }
+    },
+    {
+      "id": "hillshade_highlight_bright",
+      "type": "fill",
+      "source": "mapbox://mapbox.mapbox-terrain-v2",
+      "source-layer": "hillshade",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "level",
+          94
+        ]
+      ],
+      "layout": {
+        "visibility": "visible"
+      },
+      "paint": {
+        "fill-color": "#fff",
+        "fill-opacity": {
+          "base": 1,
+          "stops": [
+            [
+              15,
+              0.15
+            ],
+            [
+              17,
+              0.05
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "hillshade_highlight_med",
+      "type": "fill",
+      "source": "mapbox://mapbox.mapbox-terrain-v2",
+      "source-layer": "hillshade",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "level",
+          90
+        ]
+      ],
+      "layout": {
+        "visibility": "visible"
+      },
+      "paint": {
+        "fill-color": "#fff",
+        "fill-opacity": {
+          "base": 1,
+          "stops": [
+            [
+              15,
+              0.15
+            ],
+            [
+              17,
+              0.05
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "hillshade_shadow_faint",
+      "type": "fill",
+      "source": "mapbox://mapbox.mapbox-terrain-v2",
+      "source-layer": "hillshade",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "level",
+          89
+        ]
+      ],
+      "layout": {
+        "visibility": "visible"
+      },
+      "paint": {
+        "fill-color": "#666",
+        "fill-opacity": {
+          "base": 1,
+          "stops": [
+            [
+              14,
+              0.06
+            ],
+            [
+              17,
+              0.01
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "hillshade_shadow_med",
+      "type": "fill",
+      "source": "mapbox://mapbox.mapbox-terrain-v2",
+      "source-layer": "hillshade",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "level",
+          78
+        ]
+      ],
+      "layout": {
+        "visibility": "visible"
+      },
+      "paint": {
+        "fill-color": "#666",
+        "fill-opacity": {
+          "base": 1,
+          "stops": [
+            [
+              14,
+              0.06
+            ],
+            [
+              17,
+              0.01
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "hillshade_shadow_dark",
+      "type": "fill",
+      "source": "mapbox://mapbox.mapbox-terrain-v2",
+      "source-layer": "hillshade",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "level",
+          67
+        ]
+      ],
+      "layout": {
+        "visibility": "visible"
+      },
+      "paint": {
+        "fill-color": "#888888",
+        "fill-opacity": {
+          "base": 1,
+          "stops": [
+            [
+              14,
+              0.06
+            ],
+            [
+              17,
+              0.01
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "hillshade_shadow_extreme",
+      "type": "fill",
+      "source": "mapbox://mapbox.mapbox-terrain-v2",
+      "source-layer": "hillshade",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "level",
+          56
+        ]
+      ],
+      "layout": {
+        "visibility": "visible"
+      },
+      "paint": {
+        "fill-color": "#999",
+        "fill-opacity": {
+          "base": 1,
+          "stops": [
+            [
+              14,
+              0.06
+            ],
+            [
+              17,
+              0.01
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "building",
+      "type": "fill",
+      "source": "mapbox",
+      "source-layer": "building",
+      "minzoom": 15,
+      "paint": {
+        "fill-outline-color": "#c0c0c0",
+        "fill-opacity": {
+          "base": 1,
+          "stops": [
+            [
+              15,
+              0
+            ],
+            [
+              16.5,
+              1
+            ]
+          ]
+        },
+        "fill-antialias": true,
+        "fill-color": "#cbcbcb"
+      }
+    },
+    {
+      "id": "waterway",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "waterway",
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "LineString"
+        ],
+        [
+          "in",
+          "class",
+          "river",
+          "canal"
+        ]
+      ],
+      "paint": {
+        "line-color": "#d6d6d6",
+        "line-width": {
+          "base": 1,
+          "stops": [
+            [
+              6,
+              0.25
+            ],
+            [
+              20,
+              6
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "waterway_stream",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "waterway",
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "LineString"
+        ],
+        [
+          "in",
+          "class",
+          "stream"
+        ]
+      ],
+      "paint": {
+        "line-color": "#d6d6d6",
+        "line-width": {
+          "base": 1,
+          "stops": [
+            [
+              13,
+              0.75
+            ],
+            [
+              20,
+              4
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "water",
+      "type": "fill",
+      "source": "mapbox",
+      "source-layer": "water",
+      "layout": {
+        "visibility": "visible"
+      },
+      "paint": {
+        "fill-color": "#d6d6d6"
+      }
+    },
+    {
+      "id": "aeroway_runway",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "aeroway",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "LineString"
+        ],
+        [
+          "==",
+          "type",
+          "runway"
+        ]
+      ],
+      "layout": {
+        "line-join": "miter",
+        "visibility": "visible"
+      },
+      "paint": {
+        "line-width": {
+          "base": 1.15,
+          "stops": [
+            [
+              11,
+              3
+            ],
+            [
+              20,
+              32
+            ]
+          ]
+        },
+        "line-color": "#fff",
+        "line-opacity": {
+          "base": 1,
+          "stops": [
+            [
+              9,
+              0.5
+            ],
+            [
+              11,
+              1
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "aeroway_taxiway",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "aeroway",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "LineString"
+        ],
+        [
+          "==",
+          "type",
+          "taxiway"
+        ]
+      ],
+      "layout": {
+        "line-join": "miter"
+      },
+      "paint": {
+        "line-width": {
+          "base": 1.15,
+          "stops": [
+            [
+              10,
+              0.25
+            ],
+            [
+              11,
+              1
+            ],
+            [
+              20,
+              8
+            ]
+          ]
+        },
+        "line-color": "#fff"
+      }
+    },
+    {
+      "id": "tunnel_minor",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "tunnel",
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "LineString"
+        ],
+        [
+          "in",
+          "class",
+          "motorway_link",
+          "street",
+          "street_limited",
+          "service",
+          "driveway",
+          "path"
+        ]
+      ],
+      "paint": {
+        "line-color": "#efefef",
+        "line-width": {
+          "base": 1.55,
+          "stops": [
+            [
+              4,
+              0.25
+            ],
+            [
+              20,
+              20
+            ]
+          ]
+        },
+        "line-dasharray": [
+          0.36,
+          0.18
+        ]
+      }
+    },
+    {
+      "id": "tunnel_major",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "tunnel",
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "LineString"
+        ],
+        [
+          "in",
+          "class",
+          "motorway",
+          "main"
+        ]
+      ],
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1.4,
+          "stops": [
+            [
+              6,
+              0.5
+            ],
+            [
+              20,
+              30
+            ]
+          ]
+        },
+        "line-dasharray": [
+          0.28,
+          0.14
+        ]
+      }
+    },
+    {
+      "id": "road-path",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "road",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "class",
+          "path"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible"
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1,
+          "stops": [
+            [
+              15,
+              1
+            ],
+            [
+              18,
+              4
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "road-street-low-zoom",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "road",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "street",
+          "street_limited"
+        ],
+        [
+          "==",
+          "$type",
+          "LineString"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1.5,
+          "stops": [
+            [
+              12.5,
+              0.5
+            ],
+            [
+              14,
+              2
+            ],
+            [
+              18,
+              18
+            ]
+          ]
+        },
+        "line-opacity": {
+          "base": 1,
+          "stops": [
+            [
+              11.5,
+              0
+            ],
+            [
+              12,
+              1
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "road-service-driveway",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "road",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "service",
+          "driveway"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1,
+          "stops": [
+            [
+              14,
+              0.5
+            ],
+            [
+              18,
+              12
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "road-motorway_link",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "road",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "motorway_link"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1.5,
+          "stops": [
+            [
+              12.5,
+              0.5
+            ],
+            [
+              14,
+              2
+            ],
+            [
+              18,
+              18
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "road-street_limited",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "road",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "class",
+          "street_limited"
+        ],
+        [
+          "==",
+          "$type",
+          "LineString"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1.5,
+          "stops": [
+            [
+              12.5,
+              0.5
+            ],
+            [
+              14,
+              2
+            ],
+            [
+              18,
+              18
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "road-street",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "road",
+      "minzoom": 14,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "street"
+        ],
+        [
+          "==",
+          "$type",
+          "LineString"
+        ]
+      ],
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round",
+        "visibility": "visible"
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1.5,
+          "stops": [
+            [
+              12.5,
+              0.3
+            ],
+            [
+              14,
+              2
+            ],
+            [
+              18,
+              18
+            ]
+          ]
+        },
+        "line-opacity": 1
+      }
+    },
+    {
+      "id": "road-main",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "road",
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "LineString"
+        ],
+        [
+          "in",
+          "class",
+          "main"
+        ]
+      ],
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round",
+        "visibility": "visible"
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1.5,
+          "stops": [
+            [
+              6,
+              0.5
+            ],
+            [
+              18,
+              26
+            ]
+          ]
+        },
+        "line-opacity": {
+          "base": 1,
+          "stops": [
+            [
+              5,
+              0
+            ],
+            [
+              5.5,
+              1
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "road-trunk",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "road",
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "main"
+        ],
+        [
+          "==",
+          "type",
+          "trunk"
+        ]
+      ],
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round",
+        "visibility": "visible"
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1.5,
+          "stops": [
+            [
+              5,
+              0.75
+            ],
+            [
+              18,
+              32
+            ]
+          ]
+        },
+        "line-opacity": 1
+      }
+    },
+    {
+      "id": "road-motorway",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "road",
+      "minzoom": 0,
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "motorway"
+        ]
+      ],
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round",
+        "visibility": "visible"
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1.5,
+          "stops": [
+            [
+              5,
+              0.75
+            ],
+            [
+              18,
+              32
+            ]
+          ]
+        },
+        "line-opacity": {
+          "base": 1,
+          "stops": [
+            [
+              5,
+              0
+            ],
+            [
+              5.5,
+              1
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "road-rail",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "road",
+      "minzoom": 13,
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "major_rail",
+          "minor_rail"
+        ]
+      ],
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round",
+        "visibility": "visible"
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1.5,
+          "stops": [
+            [
+              14,
+              0.5
+            ],
+            [
+              20,
+              1
+            ]
+          ]
+        },
+        "line-opacity": 1
+      }
+    },
+    {
+      "id": "road-rail-tracks",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "road",
+      "minzoom": 13,
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "major_rail",
+          "minor_rail"
+        ]
+      ],
+      "layout": {
+        "line-cap": "butt",
+        "line-join": "miter",
+        "visibility": "visible"
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1.5,
+          "stops": [
+            [
+              14,
+              4
+            ],
+            [
+              20,
+              8
+            ]
+          ]
+        },
+        "line-opacity": 1
+      }
+    },
+    {
+      "id": "bridge_minor_case",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "bridge",
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "LineString"
+        ],
+        [
+          "in",
+          "class",
+          "motorway_link",
+          "street",
+          "street_limited",
+          "service",
+          "driveway",
+          "path"
+        ]
+      ],
+      "paint": {
+        "line-color": "#eee",
+        "line-width": {
+          "base": 1.6,
+          "stops": [
+            [
+              12,
+              0.5
+            ],
+            [
+              20,
+              10
+            ]
+          ]
+        },
+        "line-gap-width": {
+          "base": 1.55,
+          "stops": [
+            [
+              4,
+              0.25
+            ],
+            [
+              20,
+              20
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "bridge-path",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "bridge",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "class",
+          "path"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#efefef",
+        "line-width": {
+          "base": 1.5,
+          "stops": [
+            [
+              15,
+              1
+            ],
+            [
+              18,
+              4
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "bridge-street-low-zoom",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "bridge",
+      "minzoom": 11,
+      "maxzoom": 14.1,
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "street",
+          "street_limited"
+        ],
+        [
+          "==",
+          "$type",
+          "LineString"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#efefef",
+        "line-width": {
+          "base": 1.5,
+          "stops": [
+            [
+              12.5,
+              0.5
+            ],
+            [
+              14,
+              2
+            ],
+            [
+              18,
+              18
+            ]
+          ]
+        },
+        "line-opacity": {
+          "base": 1,
+          "stops": [
+            [
+              11.5,
+              0
+            ],
+            [
+              12,
+              1
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "bridge-motorway_link",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "bridge",
+      "minzoom": 10,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "motorway_link"
+        ],
+        [
+          "==",
+          "$type",
+          "LineString"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1.5,
+          "stops": [
+            [
+              12.5,
+              0.5
+            ],
+            [
+              14,
+              2
+            ],
+            [
+              18,
+              18
+            ]
+          ]
+        },
+        "line-opacity": 1
+      }
+    },
+    {
+      "id": "bridge-street_limited",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "bridge",
+      "minzoom": 14,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "street_limited"
+        ],
+        [
+          "==",
+          "$type",
+          "LineString"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1.5,
+          "stops": [
+            [
+              12.5,
+              0.5
+            ],
+            [
+              14,
+              2
+            ],
+            [
+              18,
+              18
+            ]
+          ]
+        },
+        "line-opacity": 1
+      }
+    },
+    {
+      "id": "bridge-street",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "bridge",
+      "minzoom": 14,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "street"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1.5,
+          "stops": [
+            [
+              12.5,
+              0.5
+            ],
+            [
+              14,
+              2
+            ],
+            [
+              18,
+              18
+            ]
+          ]
+        },
+        "line-opacity": 1
+      }
+    },
+    {
+      "id": "bridge-main",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "bridge",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "main"
+        ],
+        [
+          "!=",
+          "type",
+          "trunk"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1.5,
+          "stops": [
+            [
+              6,
+              0.5
+            ],
+            [
+              18,
+              26
+            ]
+          ]
+        },
+        "line-opacity": {
+          "base": 1,
+          "stops": [
+            [
+              5,
+              0
+            ],
+            [
+              5.5,
+              1
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "bridge-trunk",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "bridge",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "main"
+        ],
+        [
+          "==",
+          "type",
+          "trunk"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1,
+          "stops": [
+            [
+              3,
+              0.5
+            ],
+            [
+              9,
+              1.25
+            ],
+            [
+              20,
+              10
+            ]
+          ]
+        },
+        "line-opacity": 1
+      }
+    },
+    {
+      "id": "bridge-motorway",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "bridge",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "motorway"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1,
+          "stops": [
+            [
+              3,
+              0.5
+            ],
+            [
+              9,
+              1.25
+            ],
+            [
+              20,
+              10
+            ]
+          ]
+        },
+        "line-opacity": 1
+      }
+    },
+    {
+      "id": "bridge-rail",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "bridge",
+      "minzoom": 13,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "major_rail",
+          "minor_rail"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-cap": "butt",
+        "line-join": "miter",
+        "line-round-limit": 2
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1.5,
+          "stops": [
+            [
+              14,
+              0.5
+            ],
+            [
+              20,
+              1
+            ]
+          ]
+        },
+        "line-opacity": 1
+      }
+    },
+    {
+      "id": "bridge-rail-tracks",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "bridge",
+      "minzoom": 14,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "major_rail",
+          "minor_rail"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-cap": "butt",
+        "line-join": "miter",
+        "line-round-limit": 2
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1.5,
+          "stops": [
+            [
+              14,
+              4
+            ],
+            [
+              20,
+              8
+            ]
+          ]
+        },
+        "line-opacity": 1
+      }
+    },
+    {
+      "id": "bridge-rail-tracks_copy",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "bridge",
+      "minzoom": 14,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "aerialway"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-cap": "butt",
+        "line-join": "miter",
+        "line-round-limit": 2
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1.5,
+          "stops": [
+            [
+              14,
+              0.5
+            ],
+            [
+              20,
+              1
+            ]
+          ]
+        },
+        "line-opacity": 1
+      }
+    },
+    {
+      "id": "admin-3-4-boundaries-bg",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "admin",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          ">=",
+          "admin_level",
+          3
+        ],
+        [
+          "==",
+          "maritime",
+          0
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-join": "bevel"
+      },
+      "paint": {
+        "line-width": {
+          "base": 1,
+          "stops": [
+            [
+              3,
+              3.5
+            ],
+            [
+              12,
+              6
+            ]
+          ]
+        },
+        "line-opacity": {
+          "base": 1,
+          "stops": [
+            [
+              2,
+              0
+            ],
+            [
+              5,
+              0.75
+            ]
+          ]
+        },
+        "line-color": "#fff"
+      }
+    },
+    {
+      "id": "admin-2-boundaries-bg",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "admin",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "admin_level",
+          2
+        ],
+        [
+          "==",
+          "maritime",
+          0
+        ],
+        [
+          "==",
+          "disputed",
+          2
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-join": "miter"
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-opacity": {
+          "base": 1,
+          "stops": [
+            [
+              3,
+              0
+            ],
+            [
+              4,
+              0.75
+            ]
+          ]
+        },
+        "line-width": {
+          "base": 1,
+          "stops": [
+            [
+              2,
+              3.5
+            ],
+            [
+              10,
+              10
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "admin-3-4-boundaries",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "admin",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          ">=",
+          "admin_level",
+          3
+        ],
+        [
+          "==",
+          "maritime",
+          0
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-join": "miter"
+      },
+      "paint": {
+        "line-color": "#b5b5b5",
+        "line-opacity": {
+          "base": 1,
+          "stops": [
+            [
+              2,
+              0
+            ],
+            [
+              3,
+              1
+            ]
+          ]
+        },
+        "line-width": {
+          "base": 1,
+          "stops": [
+            [
+              3,
+              0.5
+            ],
+            [
+              12,
+              2
+            ]
+          ]
+        },
+        "line-dasharray": {
+          "base": 1,
+          "stops": [
+            [
+              4,
+              [
+                2,
+                0
+              ]
+            ],
+            [
+              5,
+              [
+                2,
+                2,
+                6,
+                2
+              ]
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "admin-2-boundaries",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "admin",
+      "minzoom": 1,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "admin_level",
+          2
+        ],
+        [
+          "==",
+          "maritime",
+          0
+        ],
+        [
+          "==",
+          "disputed",
+          0
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-join": "round",
+        "line-cap": "round"
+      },
+      "paint": {
+        "line-color": "#c0c0c0",
+        "line-opacity": 1,
+        "line-width": {
+          "base": 1,
+          "stops": [
+            [
+              3,
+              0.5
+            ],
+            [
+              10,
+              2
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "interstate-motorway_shields",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "road_label",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "in",
+          "shield",
+          "us-interstate",
+          "us-interstate-business",
+          "us-interstate-duplex"
+        ],
+        [
+          "<=",
+          "reflen",
+          6
+        ]
+      ],
+      "layout": {
+        "icon-image": "default-4-small",
+        "text-max-angle": 38,
+        "text-font": [
+          "DIN Offc Pro Bold",
+          "Arial Unicode MS Regular"
+        ],
+        "symbol-placement": "line",
+        "visibility": "none",
+        "text-field": "{ref}",
+        "text-letter-spacing": 0.05,
+        "symbol-spacing": {
+          "base": 1,
+          "stops": [
+            [
+              10,
+              200
+            ],
+            [
+              15,
+              600
+            ]
+          ]
+        },
+        "text-size": {
+          "base": 1,
+          "stops": [
+            [
+              15.95,
+              9
+            ],
+            [
+              16,
+              11
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": "#929292",
+        "text-halo-color": "#fff",
+        "icon-color": "white",
+        "icon-halo-width": 1,
+        "icon-halo-color": "rgba(0, 0, 0, 1)"
+      }
+    },
+    {
+      "id": "waterway-label",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "waterway_label",
+      "minzoom": 12,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "class",
+          "river"
+        ]
+      ],
+      "layout": {
+        "text-font": [
+          "DIN Offc Pro Italic",
+          "Arial Unicode MS Regular"
+        ],
+        "visibility": "visible",
+        "symbol-placement": "line",
+        "text-field": "{name_en}",
+        "text-size": {
+          "base": 1,
+          "stops": [
+            [
+              13,
+              12
+            ],
+            [
+              18,
+              16
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": "#929292"
+      }
+    },
+    {
+      "id": "road-label-sm",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "road_label",
+      "minzoom": 12,
+      "filter": [
+        "all",
+        [
+          "!in",
+          "class",
+          "motorway",
+          "main",
+          "street_limited",
+          "street"
+        ],
+        [
+          "==",
+          "$type",
+          "LineString"
+        ]
+      ],
+      "layout": {
+        "symbol-placement": "line",
+        "text-field": "{name_en}",
+        "text-font": [
+          "DIN Offc Pro Medium",
+          "Arial Unicode MS Bold"
+        ],
+        "text-transform": "none",
+        "text-letter-spacing": 0,
+        "text-padding": 0,
+        "text-size": {
+          "base": 1,
+          "stops": [
+            [
+              8,
+              8
+            ],
+            [
+              20,
+              15
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-halo-color": "#fff",
+        "text-halo-width": 2,
+        "text-color": "#929292"
+      }
+    },
+    {
+      "id": "road-label-med",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "road_label",
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "street",
+          "street_limited"
+        ]
+      ],
+      "layout": {
+        "symbol-placement": "line",
+        "text-field": "{name_en}",
+        "text-font": [
+          "DIN Offc Pro Medium",
+          "Arial Unicode MS Bold"
+        ],
+        "text-transform": "none",
+        "text-letter-spacing": 0,
+        "text-padding": 0,
+        "text-size": {
+          "base": 1,
+          "stops": [
+            [
+              8,
+              8
+            ],
+            [
+              20,
+              16
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-halo-color": "#fff",
+        "text-halo-width": 2,
+        "text-color": "#929292"
+      }
+    },
+    {
+      "id": "road-label-large",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "road_label",
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "motorway",
+          "main"
+        ]
+      ],
+      "layout": {
+        "symbol-placement": "line",
+        "text-field": "{name_en}",
+        "text-font": [
+          "DIN Offc Pro Medium",
+          "Arial Unicode MS Bold"
+        ],
+        "text-transform": "none",
+        "text-letter-spacing": 0,
+        "text-padding": 0,
+        "text-size": {
+          "base": 1,
+          "stops": [
+            [
+              8,
+              8
+            ],
+            [
+              20,
+              17
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-halo-color": "#fff",
+        "text-halo-width": 2,
+        "text-color": "#929292"
+      }
+    },
+    {
+      "id": "airport-label",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "poi_label",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "in",
+          "maki",
+          "airport",
+          "heliport",
+          "rocket"
+        ],
+        [
+          "<=",
+          "scalerank",
+          2
+        ]
+      ],
+      "layout": {
+        "text-font": [
+          "DIN Offc Pro Medium",
+          "Arial Unicode MS Regular"
+        ],
+        "visibility": "visible",
+        "text-field": {
+          "base": 1,
+          "stops": [
+            [
+              12,
+              ""
+            ],
+            [
+              13,
+              "{name_en}"
+            ]
+          ]
+        },
+        "text-max-width": 9,
+        "text-size": {
+          "base": 1,
+          "stops": [
+            [
+              10,
+              10
+            ],
+            [
+              18,
+              18
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": "#666",
+        "text-halo-color": "#fff",
+        "text-halo-width": 1,
+        "text-halo-blur": 0
+      }
+    },
+    {
+      "id": "poi-parks-scalerank1",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "poi_label",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "maki",
+          "park"
+        ],
+        [
+          "<=",
+          "scalerank",
+          1
+        ]
+      ],
+      "layout": {
+        "text-max-width": 8,
+        "visibility": "visible",
+        "text-field": "{name_en}",
+        "text-font": [
+          "DIN Offc Pro Regular",
+          "Arial Unicode MS Regular"
+        ],
+        "text-size": {
+          "base": 1,
+          "stops": [
+            [
+              10,
+              10
+            ],
+            [
+              18,
+              14
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": "#4f4f4f",
+        "text-halo-color": "#fff",
+        "text-halo-width": 1
+      }
+    },
+    {
+      "id": "poi-scalerank1",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "poi_label",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "!in",
+          "maki",
+          "rail-light",
+          "rail-metro",
+          "rail",
+          "airport",
+          "airfield",
+          "heliport",
+          "rocket",
+          "park",
+          "golf",
+          "cemetary",
+          "zoo",
+          "campsite",
+          "swimming",
+          "dog-park"
+        ],
+        [
+          "<=",
+          "scalerank",
+          1
+        ]
+      ],
+      "layout": {
+        "text-max-width": 8,
+        "visibility": "visible",
+        "text-field": "{name_en}",
+        "text-font": [
+          "DIN Offc Pro Regular",
+          "Arial Unicode MS Regular"
+        ],
+        "text-size": {
+          "base": 1,
+          "stops": [
+            [
+              10,
+              10
+            ],
+            [
+              18,
+              14
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": "#5a5a5a",
+        "text-halo-color": "#fff",
+        "text-halo-width": 1
+      }
+    },
+    {
+      "id": "water-label",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "water_label",
+      "minzoom": 5,
+      "maxzoom": 22,
+      "layout": {
+        "text-font": [
+          "DIN Offc Pro Italic",
+          "Arial Unicode MS Regular"
+        ],
+        "visibility": "visible",
+        "text-field": "{name_en}",
+        "text-max-width": 7,
+        "text-size": {
+          "base": 1,
+          "stops": [
+            [
+              13,
+              12
+            ],
+            [
+              18,
+              16
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              "#929292"
+            ],
+            [
+              20,
+              "#929292"
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "place_label_neighborhood",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "place_label",
+      "minzoom": 12,
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "Point"
+        ],
+        [
+          "in",
+          "type",
+          "suburb",
+          "neighbourhood"
+        ]
+      ],
+      "layout": {
+        "text-field": "{name_en}",
+        "text-font": [
+          "DIN Offc Pro Bold",
+          "Arial Unicode MS Bold"
+        ],
+        "text-max-width": 7,
+        "text-letter-spacing": 0.1,
+        "text-transform": "uppercase",
+        "text-size": {
+          "stops": [
+            [
+              12,
+              10
+            ],
+            [
+              16,
+              14
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": "#666",
+        "text-halo-color": "#fff",
+        "text-halo-width": 1,
+        "text-halo-blur": 1,
+        "text-opacity": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              0
+            ],
+            [
+              12,
+              0.66
+            ],
+            [
+              13,
+              1
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "place_label_other",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "place_label",
+      "minzoom": 8,
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "Point"
+        ],
+        [
+          "in",
+          "type",
+          "town",
+          "village",
+          "hamlet"
+        ]
+      ],
+      "layout": {
+        "text-field": "{name_en}",
+        "text-font": [
+          "DIN Offc Pro Regular",
+          "Arial Unicode MS Bold"
+        ],
+        "text-max-width": 15,
+        "text-size": {
+          "stops": [
+            [
+              6,
+              10
+            ],
+            [
+              12,
+              13
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": "#666",
+        "text-halo-color": "#fff",
+        "text-halo-width": 1,
+        "text-halo-blur": 1
+      }
+    },
+    {
+      "id": "place_label_city_small_s",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "place_label",
+      "maxzoom": 16,
+      "filter": [
+        "all",
+        [
+          "==",
+          "type",
+          "city"
+        ],
+        [
+          ">",
+          "scalerank",
+          4
+        ],
+        [
+          "in",
+          "ldir",
+          "S",
+          "E",
+          "SE",
+          "SW"
+        ]
+      ],
+      "layout": {
+        "text-field": "{name_en}",
+        "text-font": [
+          "DIN Offc Pro Medium",
+          "Arial Unicode MS Bold"
+        ],
+        "text-max-width": 10,
+        "text-anchor": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              "top"
+            ],
+            [
+              6,
+              "center"
+            ]
+          ]
+        },
+        "text-offset": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              [
+                0,
+                0.1
+              ]
+            ],
+            [
+              6,
+              [
+                0,
+                0
+              ]
+            ]
+          ]
+        },
+        "text-size": {
+          "stops": [
+            [
+              6,
+              11
+            ],
+            [
+              14,
+              19
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": "#666",
+        "text-halo-color": "#fff",
+        "text-halo-width": 1.5,
+        "text-halo-blur": 0
+      }
+    },
+    {
+      "id": "place_label_city_small_n",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "place_label",
+      "maxzoom": 16,
+      "filter": [
+        "all",
+        [
+          "==",
+          "type",
+          "city"
+        ],
+        [
+          ">",
+          "scalerank",
+          4
+        ],
+        [
+          "in",
+          "ldir",
+          "N",
+          "W",
+          "NW",
+          "NE"
+        ]
+      ],
+      "layout": {
+        "text-field": "{name_en}",
+        "text-font": [
+          "DIN Offc Pro Medium",
+          "Arial Unicode MS Bold"
+        ],
+        "text-max-width": 10,
+        "text-anchor": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              "bottom"
+            ],
+            [
+              6,
+              "center"
+            ]
+          ]
+        },
+        "text-offset": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              [
+                0,
+                -0.2
+              ]
+            ],
+            [
+              6,
+              [
+                0,
+                0
+              ]
+            ]
+          ]
+        },
+        "text-size": {
+          "stops": [
+            [
+              6,
+              11
+            ],
+            [
+              14,
+              19
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": "#666",
+        "text-halo-color": "#fff",
+        "text-halo-width": 1.5,
+        "text-halo-blur": 0
+      }
+    },
+    {
+      "id": "place_label_city_medium_s",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "place_label",
+      "maxzoom": 16,
+      "filter": [
+        "all",
+        [
+          "==",
+          "type",
+          "city"
+        ],
+        [
+          "<=",
+          "scalerank",
+          4
+        ],
+        [
+          ">",
+          "scalerank",
+          1
+        ],
+        [
+          "in",
+          "ldir",
+          "S",
+          "E",
+          "SE",
+          "SW"
+        ]
+      ],
+      "layout": {
+        "text-field": "{name_en}",
+        "text-font": [
+          "DIN Offc Pro Medium",
+          "Arial Unicode MS Bold"
+        ],
+        "text-max-width": 10,
+        "text-anchor": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              "top"
+            ],
+            [
+              6,
+              "center"
+            ]
+          ]
+        },
+        "text-offset": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              [
+                0,
+                0.1
+              ]
+            ],
+            [
+              6,
+              [
+                0,
+                0
+              ]
+            ]
+          ]
+        },
+        "text-size": {
+          "stops": [
+            [
+              5,
+              11
+            ],
+            [
+              12,
+              19
+            ]
+          ],
+          "base": 0.9
+        }
+      },
+      "paint": {
+        "text-color": "#666",
+        "text-halo-color": "#fff",
+        "text-halo-width": 1.5,
+        "text-halo-blur": 0
+      }
+    },
+    {
+      "id": "place_label_city_medium_n",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "place_label",
+      "maxzoom": 16,
+      "filter": [
+        "all",
+        [
+          "==",
+          "type",
+          "city"
+        ],
+        [
+          "<=",
+          "scalerank",
+          4
+        ],
+        [
+          ">",
+          "scalerank",
+          1
+        ],
+        [
+          "in",
+          "ldir",
+          "N",
+          "W",
+          "NW",
+          "NE"
+        ]
+      ],
+      "layout": {
+        "text-field": "{name_en}",
+        "text-font": [
+          "DIN Offc Pro Medium",
+          "Arial Unicode MS Bold"
+        ],
+        "text-max-width": 10,
+        "text-anchor": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              "bottom"
+            ],
+            [
+              6,
+              "center"
+            ]
+          ]
+        },
+        "text-offset": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              [
+                0,
+                -0.2
+              ]
+            ],
+            [
+              6,
+              [
+                0,
+                0
+              ]
+            ]
+          ]
+        },
+        "text-size": {
+          "stops": [
+            [
+              5,
+              11
+            ],
+            [
+              12,
+              19
+            ]
+          ],
+          "base": 0.9
+        }
+      },
+      "paint": {
+        "text-color": "#666",
+        "text-halo-color": "#fff",
+        "text-halo-width": 1.5,
+        "text-halo-blur": 0
+      }
+    },
+    {
+      "id": "place_label_city_large_s",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "place_label",
+      "maxzoom": 16,
+      "filter": [
+        "all",
+        [
+          "==",
+          "type",
+          "city"
+        ],
+        [
+          "<=",
+          "scalerank",
+          1
+        ],
+        [
+          "in",
+          "ldir",
+          "S",
+          "SE",
+          "SW",
+          "E"
+        ]
+      ],
+      "layout": {
+        "text-field": "{name_en}",
+        "text-font": [
+          "DIN Offc Pro Bold",
+          "Arial Unicode MS Bold"
+        ],
+        "text-max-width": 15,
+        "text-transform": "none",
+        "text-anchor": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              "top"
+            ],
+            [
+              6,
+              "center"
+            ]
+          ]
+        },
+        "text-offset": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              [
+                0,
+                0.1
+              ]
+            ],
+            [
+              6,
+              [
+                0,
+                0
+              ]
+            ]
+          ]
+        },
+        "text-size": {
+          "stops": [
+            [
+              4,
+              11
+            ],
+            [
+              10,
+              20
+            ]
+          ],
+          "base": 0.9
+        }
+      },
+      "paint": {
+        "text-color": "#666",
+        "text-halo-color": "#fff",
+        "text-halo-width": 1.5,
+        "text-halo-blur": 0
+      }
+    },
+    {
+      "id": "place_label_city_large_n",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "place_label",
+      "maxzoom": 16,
+      "filter": [
+        "all",
+        [
+          "<=",
+          "scalerank",
+          1
+        ],
+        [
+          "in",
+          "ldir",
+          "N",
+          "NE",
+          "NW",
+          "W"
+        ],
+        [
+          "==",
+          "type",
+          "city"
+        ]
+      ],
+      "layout": {
+        "text-field": "{name_en}",
+        "text-font": [
+          "DIN Offc Pro Bold",
+          "Arial Unicode MS Bold"
+        ],
+        "text-max-width": 5,
+        "text-transform": "none",
+        "text-anchor": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              "bottom"
+            ],
+            [
+              6,
+              "center"
+            ]
+          ]
+        },
+        "text-offset": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              [
+                0,
+                -0.2
+              ]
+            ],
+            [
+              6,
+              [
+                0,
+                0
+              ]
+            ]
+          ]
+        },
+        "symbol-avoid-edges": false,
+        "text-size": {
+          "stops": [
+            [
+              4,
+              11
+            ],
+            [
+              10,
+              20
+            ]
+          ],
+          "base": 0.9
+        }
+      },
+      "paint": {
+        "text-color": "#666",
+        "text-halo-color": "#fff",
+        "text-halo-width": 1.5,
+        "text-halo-blur": 0
+      }
+    },
+    {
+      "id": "marine_label_point_other",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "marine_label",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "Point"
+        ],
+        [
+          "in",
+          "labelrank",
+          4,
+          5,
+          6
+        ]
+      ],
+      "layout": {
+        "text-max-width": 8,
+        "visibility": "none",
+        "symbol-placement": "point",
+        "text-field": "{name_en}",
+        "text-line-height": 1.2,
+        "text-letter-spacing": 0.1,
+        "text-font": [
+          "DIN Offc Pro Regular",
+          "Arial Unicode MS Regular"
+        ],
+        "text-size": {
+          "base": 1,
+          "stops": [
+            [
+              4,
+              12
+            ],
+            [
+              6,
+              16
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": "#666"
+      }
+    },
+    {
+      "id": "marine_label_point_3",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "marine_label",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "Point"
+        ],
+        [
+          "==",
+          "labelrank",
+          3
+        ]
+      ],
+      "layout": {
+        "text-max-width": 8,
+        "visibility": "visible",
+        "symbol-placement": "point",
+        "text-field": "{name_en}",
+        "text-line-height": 1.3,
+        "text-letter-spacing": 0.1,
+        "text-font": [
+          "DIN Offc Pro Medium",
+          "Arial Unicode MS Regular"
+        ],
+        "text-size": {
+          "base": 1,
+          "stops": [
+            [
+              3,
+              13
+            ],
+            [
+              5,
+              18
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": "#666",
+        "text-opacity": 0.25
+      }
+    },
+    {
+      "id": "marine_label_point_2",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "marine_label",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "Point"
+        ],
+        [
+          "==",
+          "labelrank",
+          2
+        ]
+      ],
+      "layout": {
+        "text-max-width": 8,
+        "visibility": "visible",
+        "symbol-placement": "point",
+        "text-field": "{name_en}",
+        "text-line-height": 1.2,
+        "text-letter-spacing": 0,
+        "text-font": [
+          "DIN Offc Pro Medium",
+          "Arial Unicode MS Regular"
+        ],
+        "text-size": {
+          "base": 1,
+          "stops": [
+            [
+              3,
+              14
+            ],
+            [
+              5,
+              24
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": "#666",
+        "text-opacity": 0.25
+      }
+    },
+    {
+      "id": "marine_label_point_1",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "marine_label",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "Point"
+        ],
+        [
+          "==",
+          "labelrank",
+          1
+        ]
+      ],
+      "layout": {
+        "text-max-width": 4,
+        "visibility": "visible",
+        "symbol-placement": "point",
+        "text-field": "{name_en}",
+        "text-line-height": 1.5,
+        "text-letter-spacing": 0.25,
+        "text-font": [
+          "DIN Offc Pro Medium",
+          "Arial Unicode MS Regular"
+        ],
+        "text-size": {
+          "base": 1,
+          "stops": [
+            [
+              1,
+              12
+            ],
+            [
+              4,
+              30
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": "#666",
+        "text-opacity": 0.25
+      }
+    },
+    {
+      "id": "marine_label_line_other",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "marine_label",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "LineString"
+        ],
+        [
+          "in",
+          "labelrank",
+          4,
+          5,
+          6
+        ]
+      ],
+      "layout": {
+        "text-max-width": 15,
+        "visibility": "visible",
+        "symbol-placement": "line",
+        "text-field": "{name_en}",
+        "text-line-height": 1.2,
+        "text-letter-spacing": 0,
+        "text-font": [
+          "DIN Offc Pro Medium",
+          "Arial Unicode MS Regular"
+        ],
+        "text-size": {
+          "base": 1,
+          "stops": [
+            [
+              4,
+              12
+            ],
+            [
+              6,
+              16
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": "#666",
+        "text-opacity": 0.25
+      }
+    },
+    {
+      "id": "marine_label_line_3",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "marine_label",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "LineString"
+        ],
+        [
+          "==",
+          "labelrank",
+          3
+        ]
+      ],
+      "layout": {
+        "text-max-width": 15,
+        "visibility": "visible",
+        "symbol-placement": "line",
+        "text-field": "{name_en}",
+        "text-line-height": 1.2,
+        "text-letter-spacing": 0,
+        "text-font": [
+          "DIN Offc Pro Medium",
+          "Arial Unicode MS Regular"
+        ],
+        "text-size": {
+          "base": 1,
+          "stops": [
+            [
+              3,
+              13
+            ],
+            [
+              5,
+              18
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": "#666",
+        "text-opacity": 0.25
+      }
+    },
+    {
+      "id": "marine_label_line_2",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "marine_label",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "LineString"
+        ],
+        [
+          "==",
+          "labelrank",
+          2
+        ]
+      ],
+      "layout": {
+        "text-max-width": 15,
+        "visibility": "visible",
+        "symbol-placement": "line",
+        "text-field": "{name_en}",
+        "text-line-height": 1.2,
+        "text-letter-spacing": 0,
+        "text-font": [
+          "DIN Offc Pro Medium",
+          "Arial Unicode MS Regular"
+        ],
+        "text-size": {
+          "base": 1,
+          "stops": [
+            [
+              3,
+              14
+            ],
+            [
+              5,
+              24
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": "#666",
+        "text-opacity": 0.25
+      }
+    },
+    {
+      "id": "marine_label_line_1",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "marine_label",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "LineString"
+        ],
+        [
+          "==",
+          "labelrank",
+          1
+        ]
+      ],
+      "layout": {
+        "text-max-width": 15,
+        "visibility": "visible",
+        "symbol-placement": "line",
+        "text-field": "{name_en}",
+        "text-line-height": 1.2,
+        "text-letter-spacing": 0.4,
+        "text-font": [
+          "DIN Offc Pro Medium",
+          "Arial Unicode MS Regular"
+        ],
+        "text-size": {
+          "base": 1,
+          "stops": [
+            [
+              3,
+              25
+            ],
+            [
+              4,
+              30
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": "#666",
+        "text-opacity": 0.25
+      }
+    },
+    {
+      "id": "state-label-lg",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "state_label",
+      "minzoom": 3,
+      "maxzoom": 7,
+      "filter": [
+        "all",
+        [
+          ">=",
+          "area",
+          80000
+        ]
+      ],
+      "layout": {
+        "text-transform": "uppercase",
+        "visibility": "visible",
+        "text-field": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              "{abbr}"
+            ],
+            [
+              4,
+              "{name_en}"
+            ]
+          ]
+        },
+        "text-font": [
+          "DIN Offc Pro Bold",
+          "Arial Unicode MS Regular"
+        ],
+        "text-letter-spacing": 0.15,
+        "text-max-width": 7,
+        "text-size": {
+          "base": 1,
+          "stops": [
+            [
+              4,
+              9
+            ],
+            [
+              7,
+              18
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              "#929292"
+            ],
+            [
+              20,
+              "#929292"
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "country-label-sm",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "country_label",
+      "minzoom": 1,
+      "maxzoom": 10,
+      "filter": [
+        "all",
+        [
+          ">=",
+          "scalerank",
+          5
+        ]
+      ],
+      "layout": {
+        "text-field": "{name_en}",
+        "text-font": [
+          "DIN Offc Pro Medium",
+          "Arial Unicode MS Regular"
+        ],
+        "text-max-width": 7,
+        "text-size": {
+          "stops": [
+            [
+              3,
+              8
+            ],
+            [
+              9,
+              18
+            ]
+          ],
+          "base": 0.9
+        }
+      },
+      "paint": {
+        "text-color": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              "#444"
+            ],
+            [
+              10,
+              "#888"
+            ]
+          ]
+        },
+        "text-halo-color": "#fff",
+        "text-halo-width": 1,
+        "text-halo-blur": 1
+      }
+    },
+    {
+      "id": "country-label-md",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "country_label",
+      "minzoom": 1,
+      "maxzoom": 8,
+      "filter": [
+        "all",
+        [
+          "in",
+          "scalerank",
+          3,
+          4
+        ]
+      ],
+      "layout": {
+        "text-field": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              "{code}"
+            ],
+            [
+              2,
+              "{name_en}"
+            ]
+          ]
+        },
+        "text-font": [
+          "DIN Offc Pro Medium",
+          "Arial Unicode MS Regular"
+        ],
+        "text-max-width": 7,
+        "text-size": {
+          "stops": [
+            [
+              2,
+              8
+            ],
+            [
+              7,
+              18
+            ]
+          ],
+          "base": 0.9
+        }
+      },
+      "paint": {
+        "text-color": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              "#444"
+            ],
+            [
+              10,
+              "#888"
+            ]
+          ]
+        },
+        "text-halo-color": "#fff",
+        "text-halo-width": 1,
+        "text-halo-blur": 1
+      }
+    },
+    {
+      "id": "country-label-lg",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "country_label",
+      "maxzoom": 12,
+      "filter": [
+        "all",
+        [
+          "in",
+          "scalerank",
+          1,
+          2
+        ]
+      ],
+      "layout": {
+        "text-field": "{name_en}",
+        "text-font": [
+          "DIN Offc Pro Medium",
+          "Arial Unicode MS Regular"
+        ],
+        "text-max-width": 6,
+        "text-size": {
+          "stops": [
+            [
+              1,
+              9
+            ],
+            [
+              5,
+              18
+            ]
+          ],
+          "base": 0.9
+        }
+      },
+      "paint": {
+        "text-color": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              "#444"
+            ],
+            [
+              10,
+              "#888"
+            ]
+          ]
+        },
+        "text-halo-color": "#fff",
+        "text-halo-width": 1,
+        "text-halo-blur": 1
       }
     }
-  }, {
-    "id": "place_label_other",
-    "type": "symbol",
-    "source": "mapbox",
-    "source-layer": "place_label",
-    "minzoom": 8,
-    "filter": ["all", ["==", "$type", "Point"], ["in", "type", "town", "village", "hamlet"]],
-    "layout": {
-      "text-field": "@name",
-      "text-font": "DIN Offc Pro Regular, Arial Unicode MS Bold",
-      "text-max-width": 15,
-      "text-max-size": 18
-    },
-    "paint": {
-      "text-color": "@label",
-      "text-halo-color": "@label-halo",
-      "text-halo-width": 1,
-      "text-halo-blur": 1,
-      "text-size": {
-        "stops": [[6, 10], [12, 13]]
-      }
-    }
-  }, {
-    "id": "place_label_neighborhood",
-    "type": "symbol",
-    "source": "mapbox",
-    "source-layer": "place_label",
-    "minzoom": 12,
-    "filter": ["all", ["==", "$type", "Point"], ["in", "type", "suburb", "neighbourhood"]],
-    "layout": {
-      "text-field": "@name",
-      "text-font": "DIN Offc Pro Bold, Arial Unicode MS Bold",
-      "text-max-width": 7,
-      "text-max-size": 14,
-      "text-letter-spacing": 0.1,
-      "text-transform": "uppercase"
-    },
-    "paint": {
-      "text-color": "@label",
-      "text-halo-color": "@label-halo",
-      "text-halo-width": 1,
-      "text-halo-blur": 1,
-      "text-size": {
-        "stops": [[12, 10], [16, 14]]
-      },
-      "text-opacity": {
-        "base": 1,
-        "stops": [[0, 0], [12, 0.66], [13, 1]]
-      }
-    }
-  }, {
-    "id": "water-label",
-    "type": "symbol",
-    "source": "mapbox",
-    "source-layer": "water_label",
-    "minzoom": 5,
-    "maxzoom": 22,
-    "layout": {
-      "text-font": "DIN Offc Pro Italic, Arial Unicode MS Regular",
-      "visibility": "visible",
-      "text-field": "{name_en}",
-      "text-max-width": 7
-    },
-    "paint": {
-      "text-color": "@state-label",
-      "text-size": {
-        "base": 1,
-        "stops": [[13, 12], [18, 16]]
-      }
-    }
-  }, {
-    "id": "poi-scalerank1",
-    "type": "symbol",
-    "source": "mapbox",
-    "source-layer": "poi_label",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", ["!in", "maki", "rail-light", "rail-metro", "rail", "airport", "airfield", "heliport", "rocket", "park", "golf", "cemetary", "zoo", "campsite", "swimming", "dog-park"], ["<=", "scalerank", 1]],
-    "layout": {
-      "text-max-width": 8,
-      "visibility": "visible",
-      "text-field": "{name_en}",
-      "text-max-size": 14,
-      "text-font": "DIN Offc Pro Regular, Arial Unicode MS Regular"
-    },
-    "paint": {
-      "text-color": "@label-secondary",
-      "text-size": {
-        "base": 1,
-        "stops": [[10, 10], [18, 14]]
-      },
-      "text-halo-color": "@label-halo",
-      "text-halo-width": 1
-    }
-  }, {
-    "id": "poi-parks-scalerank1",
-    "type": "symbol",
-    "source": "mapbox",
-    "source-layer": "poi_label",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", ["==", "maki", "park"], ["<=", "scalerank", 1]],
-    "layout": {
-      "text-max-width": 8,
-      "visibility": "visible",
-      "text-field": "{name_en}",
-      "text-max-size": 14,
-      "text-font": "DIN Offc Pro Regular, Arial Unicode MS Regular"
-    },
-    "paint": {
-      "text-color": "@label-park",
-      "text-size": {
-        "base": 1,
-        "stops": [[10, 10], [18, 14]]
-      },
-      "text-halo-color": "@label-halo",
-      "text-halo-width": 1
-    }
-  }, {
-    "id": "airport-label",
-    "type": "symbol",
-    "source": "mapbox",
-    "source-layer": "poi_label",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", ["in", "maki", "airport", "heliport", "rocket"], ["<=", "scalerank", 2]],
-    "layout": {
-      "text-font": "DIN Offc Pro Medium, Arial Unicode MS Regular",
-      "visibility": "visible",
-      "text-field": {
-        "base": 1,
-        "stops": [[12, ""], [13, "{name_en}"]]
-      },
-      "text-max-size": 18,
-      "text-max-width": 9
-    },
-    "paint": {
-      "text-color": "@label",
-      "text-size": {
-        "base": 1,
-        "stops": [[10, 10], [18, 18]]
-      },
-      "text-halo-color": "@label-halo",
-      "text-halo-width": 1,
-      "text-halo-blur": 0
-    }
-  }, {
-    "id": "road-label-large",
-    "type": "symbol",
-    "source": "mapbox",
-    "source-layer": "road_label",
-    "filter": ["all", ["in", "class", "motorway", "main"]],
-    "layout": {
-      "symbol-placement": "line",
-      "text-field": "{name_en}",
-      "text-font": "DIN Offc Pro Medium, Arial Unicode MS Bold",
-      "text-transform": "none",
-      "text-letter-spacing": 0,
-      "text-max-size": 16,
-      "text-padding": 0
-    },
-    "paint": {
-      "text-size": {
-        "base": 1,
-        "stops": [[8, 8], [20, 17]]
-      },
-      "text-halo-color": "@label-halo",
-      "text-halo-width": 2,
-      "text-color": "@label-road"
-    }
-  }, {
-    "id": "road-label-med",
-    "type": "symbol",
-    "source": "mapbox",
-    "source-layer": "road_label",
-    "filter": ["all", ["in", "class", "street", "street_limited"]],
-    "layout": {
-      "symbol-placement": "line",
-      "text-field": "{name_en}",
-      "text-font": "@sans_md",
-      "text-transform": "none",
-      "text-letter-spacing": 0,
-      "text-max-size": 16,
-      "text-padding": 0
-    },
-    "paint": {
-      "text-size": {
-        "base": 1,
-        "stops": [[8, 8], [20, 16]]
-      },
-      "text-halo-color": "@label-halo",
-      "text-halo-width": 2,
-      "text-color": "@label-road"
-    }
-  }, {
-    "id": "road-label-sm",
-    "type": "symbol",
-    "source": "mapbox",
-    "source-layer": "road_label",
-    "minzoom": 12,
-    "filter": ["all", ["!in", "class", "motorway", "main", "street_limited", "street"], ["==", "$type", "LineString"]],
-    "layout": {
-      "symbol-placement": "line",
-      "text-field": "{name_en}",
-      "text-font": "@sans_md",
-      "text-transform": "none",
-      "text-letter-spacing": 0,
-      "text-max-size": 16,
-      "text-padding": 0
-    },
-    "paint": {
-      "text-size": {
-        "base": 1,
-        "stops": [[8, 8], [20, 15]]
-      },
-      "text-halo-color": "@label-halo",
-      "text-halo-width": 2,
-      "text-color": "@label-road"
-    }
-  }, {
-    "id": "waterway-label",
-    "type": "symbol",
-    "source": "mapbox",
-    "source-layer": "waterway_label",
-    "minzoom": 12,
-    "maxzoom": 22,
-    "filter": ["all", ["==", "class", "river"]],
-    "layout": {
-      "text-font": "DIN Offc Pro Italic, Arial Unicode MS Regular",
-      "visibility": "visible",
-      "symbol-placement": "line",
-      "text-field": "{name_en}"
-    },
-    "paint": {
-      "text-color": "@label-waterway",
-      "text-size": {
-        "base": 1,
-        "stops": [[13, 12], [18, 16]]
-      }
-    }
-  }, {
-    "id": "interstate-motorway_shields",
-    "type": "symbol",
-    "source": "mapbox",
-    "source-layer": "road_label",
-    "minzoom": 0,
-    "maxzoom": 22,
-    "filter": ["all", ["in", "shield", "us-interstate", "us-interstate-business", "us-interstate-duplex"], ["<=", "reflen", 6]],
-    "layout": {
-      "symbol-min-distance": {
-        "base": 1,
-        "stops": [[10, 200], [15, 600]]
-      },
-      "icon-image": "default-4-small",
-      "text-max-angle": 38,
-      "text-max-size": 11,
-      "text-font": "DIN Offc Pro Bold, Arial Unicode MS Regular",
-      "symbol-placement": "line",
-      "visibility": "none",
-      "text-field": "{ref}",
-      "text-letter-spacing": 0.05
-    },
-    "paint": {
-      "text-color": "@label-road",
-      "text-size": {
-        "base": 1,
-        "stops": [[15.95, 9], [16, 11]]
-      },
-      "text-halo-color": "@label-halo",
-      "icon-color": "white",
-      "icon-halo-width": 1,
-      "icon-halo-color": "rgba(0, 0, 0, 1)"
-    }
-  }],
+  ],
   "owner": "andreasviglakis",
   "modified": "2015-04-27T23:19:35.558Z",
   "created": "2015-04-27T23:19:35.558Z",
   "id": "andreasviglakis.3081d695"
 }
 
-},{}],24:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 'use strict';
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
@@ -3676,7 +6081,7 @@ _reactRouter2['default'].run(_routes2['default'], _reactRouter2['default'].Histo
   _react2['default'].render(_react2['default'].createElement(Handler, null), document.getElementById('app'));
 });
 
-},{"./routes":25,"react":"react","react-router":"react-router"}],25:[function(require,module,exports){
+},{"./routes":27,"react":"react","react-router":"react-router"}],27:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -3721,7 +6126,7 @@ exports['default'] = _react2['default'].createElement(
 );
 module.exports = exports['default'];
 
-},{"./components/Admin":2,"./components/App":4,"./components/PatrimonioForm":17,"./components/Projeccion":19,"./components/Web":20,"react":"react","react-router":"react-router"}],26:[function(require,module,exports){
+},{"./components/Admin":2,"./components/App":4,"./components/PatrimonioForm":18,"./components/Projeccion":20,"./components/Web":22,"react":"react","react-router":"react-router"}],28:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -3813,7 +6218,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],27:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -3860,7 +6265,7 @@ var BrowserSupportCore = {
 };
 
 module.exports = BrowserSupportCore;
-},{"./getVendorPrefixedName":63}],28:[function(require,module,exports){
+},{"./getVendorPrefixedName":65}],30:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -4020,7 +6425,7 @@ var DOMMouseMoveTracker = (function () {
 })();
 
 module.exports = DOMMouseMoveTracker;
-},{"./EventListener":29,"./cancelAnimationFramePolyfill":57,"./requestAnimationFramePolyfill":73}],29:[function(require,module,exports){
+},{"./EventListener":31,"./cancelAnimationFramePolyfill":59,"./requestAnimationFramePolyfill":75}],31:[function(require,module,exports){
 (function (process){
 /**
  * Copyright (c) 2015, Facebook, Inc.
@@ -4100,7 +6505,7 @@ var EventListener = {
 
 module.exports = EventListener;
 }).call(this,require('_process'))
-},{"./emptyFunction":62,"_process":26}],30:[function(require,module,exports){
+},{"./emptyFunction":64,"_process":28}],32:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -4139,7 +6544,7 @@ var ExecutionEnvironment = {
 };
 
 module.exports = ExecutionEnvironment;
-},{}],31:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -5196,7 +7601,7 @@ var HorizontalScrollbar = React.createClass({
 module.exports = FixedDataTable;
 // isColumnResizing should be overwritten by value from props if
 // avaialble
-},{"./FixedDataTableBufferedRows.react":32,"./FixedDataTableColumnResizeHandle.react":37,"./FixedDataTableHelper":38,"./FixedDataTableRow.react":40,"./FixedDataTableScrollHelper":42,"./FixedDataTableWidthHelper":43,"./React":51,"./ReactComponentWithPureRenderMixin":52,"./ReactWheelHandler":53,"./Scrollbar.react":54,"./cx":60,"./debounceCore":61,"./emptyFunction":62,"./invariant":64,"./joinClasses":67,"./shallowEqual":74,"./translateDOMPositionXY":75}],32:[function(require,module,exports){
+},{"./FixedDataTableBufferedRows.react":34,"./FixedDataTableColumnResizeHandle.react":39,"./FixedDataTableHelper":40,"./FixedDataTableRow.react":42,"./FixedDataTableScrollHelper":44,"./FixedDataTableWidthHelper":45,"./React":53,"./ReactComponentWithPureRenderMixin":54,"./ReactWheelHandler":55,"./Scrollbar.react":56,"./cx":62,"./debounceCore":63,"./emptyFunction":64,"./invariant":66,"./joinClasses":69,"./shallowEqual":76,"./translateDOMPositionXY":77}],34:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -5353,7 +7758,7 @@ var FixedDataTableBufferedRows = React.createClass({
 });
 
 module.exports = FixedDataTableBufferedRows;
-},{"./FixedDataTableRow.react":40,"./FixedDataTableRowBuffer":41,"./React":51,"./cx":60,"./emptyFunction":62,"./joinClasses":67,"./translateDOMPositionXY":75}],33:[function(require,module,exports){
+},{"./FixedDataTableRow.react":42,"./FixedDataTableRowBuffer":43,"./React":53,"./cx":62,"./emptyFunction":64,"./joinClasses":69,"./translateDOMPositionXY":77}],35:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -5552,7 +7957,7 @@ var FixedDataTableCell = React.createClass({
 });
 
 module.exports = FixedDataTableCell;
-},{"./FixedDataTableHelper":38,"./ImmutableObject":45,"./React":51,"./ReactComponentWithPureRenderMixin":52,"./cx":60,"./joinClasses":67}],34:[function(require,module,exports){
+},{"./FixedDataTableHelper":40,"./ImmutableObject":47,"./React":53,"./ReactComponentWithPureRenderMixin":54,"./cx":62,"./joinClasses":69}],36:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -5783,7 +8188,7 @@ var FixedDataTableCellGroup = React.createClass({
 });
 
 module.exports = FixedDataTableCellGroup;
-},{"./FixedDataTableCell.react":33,"./FixedDataTableHelper":38,"./ImmutableObject":45,"./React":51,"./ReactComponentWithPureRenderMixin":52,"./cx":60,"./translateDOMPositionXY":75}],35:[function(require,module,exports){
+},{"./FixedDataTableCell.react":35,"./FixedDataTableHelper":40,"./ImmutableObject":47,"./React":53,"./ReactComponentWithPureRenderMixin":54,"./cx":62,"./translateDOMPositionXY":77}],37:[function(require,module,exports){
 (function (process){
 /**
  * Copyright (c) 2015, Facebook, Inc.
@@ -5975,7 +8380,7 @@ var FixedDataTableColumn = React.createClass({
 
 module.exports = FixedDataTableColumn;
 }).call(this,require('_process'))
-},{"./React":51,"_process":26}],36:[function(require,module,exports){
+},{"./React":53,"_process":28}],38:[function(require,module,exports){
 (function (process){
 /**
  * Copyright (c) 2015, Facebook, Inc.
@@ -6059,7 +8464,7 @@ var FixedDataTableColumnGroup = React.createClass({
 
 module.exports = FixedDataTableColumnGroup;
 }).call(this,require('_process'))
-},{"./React":51,"_process":26}],37:[function(require,module,exports){
+},{"./React":53,"_process":28}],39:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -6220,7 +8625,7 @@ var FixedDataTableColumnResizeHandle = React.createClass({
 });
 
 module.exports = FixedDataTableColumnResizeHandle;
-},{"./DOMMouseMoveTracker":28,"./Locale":49,"./React":51,"./ReactComponentWithPureRenderMixin":52,"./clamp":58,"./cx":60}],38:[function(require,module,exports){
+},{"./DOMMouseMoveTracker":30,"./Locale":51,"./React":53,"./ReactComponentWithPureRenderMixin":54,"./clamp":60,"./cx":62}],40:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -6325,7 +8730,7 @@ var FixedDataTableHelper = {
 };
 
 module.exports = FixedDataTableHelper;
-},{"./FixedDataTableColumn.react":35,"./FixedDataTableColumnGroup.react":36,"./Locale":49,"./React":51}],39:[function(require,module,exports){
+},{"./FixedDataTableColumn.react":37,"./FixedDataTableColumnGroup.react":38,"./Locale":51,"./React":53}],41:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -6352,7 +8757,7 @@ var FixedDataTableRoot = {
 FixedDataTableRoot.version = '0.4.6';
 
 module.exports = FixedDataTableRoot;
-},{"./FixedDataTable.react":31,"./FixedDataTableColumn.react":35,"./FixedDataTableColumnGroup.react":36}],40:[function(require,module,exports){
+},{"./FixedDataTable.react":33,"./FixedDataTableColumn.react":37,"./FixedDataTableColumnGroup.react":38}],42:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -6615,7 +9020,7 @@ var FixedDataTableRow = React.createClass({
 });
 
 module.exports = FixedDataTableRow;
-},{"./FixedDataTableCellGroup.react":34,"./React":51,"./ReactComponentWithPureRenderMixin":52,"./cx":60,"./joinClasses":67,"./translateDOMPositionXY":75}],41:[function(require,module,exports){
+},{"./FixedDataTableCellGroup.react":36,"./React":53,"./ReactComponentWithPureRenderMixin":54,"./cx":62,"./joinClasses":69,"./translateDOMPositionXY":77}],43:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -6739,7 +9144,7 @@ var FixedDataTableRowBuffer = (function () {
 })();
 
 module.exports = FixedDataTableRowBuffer;
-},{"./IntegerBufferSet":47,"./clamp":58,"./invariant":64}],42:[function(require,module,exports){
+},{"./IntegerBufferSet":49,"./clamp":60,"./invariant":66}],44:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -7040,7 +9445,7 @@ var FixedDataTableScrollHelper = (function () {
 })();
 
 module.exports = FixedDataTableScrollHelper;
-},{"./PrefixIntervalTree":50,"./clamp":58}],43:[function(require,module,exports){
+},{"./PrefixIntervalTree":52,"./clamp":60}],45:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -7174,7 +9579,7 @@ var FixedDataTableWidthHelper = {
 };
 
 module.exports = FixedDataTableWidthHelper;
-},{"./React":51}],44:[function(require,module,exports){
+},{"./React":53}],46:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -7354,7 +9759,7 @@ var Heap = (function () {
 })();
 
 module.exports = Heap;
-},{}],45:[function(require,module,exports){
+},{}],47:[function(require,module,exports){
 (function (process){
 /**
  * Copyright (c) 2015, Facebook, Inc.
@@ -7558,7 +9963,7 @@ function _setDeep(obj, put) {
 
 module.exports = ImmutableObject;
 }).call(this,require('_process'))
-},{"./ImmutableValue":46,"./invariant":64,"./keyOf":69,"./mergeHelpers":70,"_process":26}],46:[function(require,module,exports){
+},{"./ImmutableValue":48,"./invariant":66,"./keyOf":71,"./mergeHelpers":72,"_process":28}],48:[function(require,module,exports){
 'use strict';
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -7701,7 +10106,7 @@ var ImmutableValue = (function () {
 ImmutableValue._DONT_EVER_TYPE_THIS_SECRET_KEY = Math.random();
 
 module.exports = ImmutableValue;
-},{"./invariant":64,"./isNode":66,"./keyOf":69}],47:[function(require,module,exports){
+},{"./invariant":66,"./isNode":68,"./keyOf":71}],49:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -7882,7 +10287,7 @@ var IntegerBufferSet = (function () {
 })();
 
 module.exports = IntegerBufferSet;
-},{"./Heap":44,"./invariant":64}],48:[function(require,module,exports){
+},{"./Heap":46,"./invariant":66}],50:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -7920,7 +10325,7 @@ module.exports = {
   NUMPAD_0: 96,
   NUMPAD_9: 105
 };
-},{}],49:[function(require,module,exports){
+},{}],51:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -7945,7 +10350,7 @@ var Locale = {
 };
 
 module.exports = Locale;
-},{}],50:[function(require,module,exports){
+},{}],52:[function(require,module,exports){
 (function (global){
 /**
  * Copyright (c) 2015, Facebook, Inc.
@@ -8206,7 +10611,7 @@ module.exports = PrefixIntervalTree;
  * Binary heap
  */
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./invariant":64}],51:[function(require,module,exports){
+},{"./invariant":66}],53:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -8221,7 +10626,7 @@ module.exports = PrefixIntervalTree;
 'use strict';
 
 module.exports = require('react');
-},{"react":"react"}],52:[function(require,module,exports){
+},{"react":"react"}],54:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -8293,7 +10698,7 @@ var ReactComponentWithPureRenderMixin = {
 };
 
 module.exports = ReactComponentWithPureRenderMixin;
-},{}],53:[function(require,module,exports){
+},{}],55:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -8399,7 +10804,7 @@ var ReactWheelHandler = (function () {
 })();
 
 module.exports = ReactWheelHandler;
-},{"./emptyFunction":62,"./normalizeWheel":72,"./requestAnimationFramePolyfill":73}],54:[function(require,module,exports){
+},{"./emptyFunction":64,"./normalizeWheel":74,"./requestAnimationFramePolyfill":75}],56:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -8846,7 +11251,7 @@ Scrollbar.KEYBOARD_SCROLL_AMOUNT = KEYBOARD_SCROLL_AMOUNT;
 Scrollbar.SIZE = parseInt(cssVar('scrollbar-size'), 10);
 
 module.exports = Scrollbar;
-},{"./DOMMouseMoveTracker":28,"./Keys":48,"./React":51,"./ReactComponentWithPureRenderMixin":52,"./ReactWheelHandler":53,"./cssVar":59,"./cx":60,"./emptyFunction":62,"./translateDOMPositionXY":75}],55:[function(require,module,exports){
+},{"./DOMMouseMoveTracker":30,"./Keys":50,"./React":53,"./ReactComponentWithPureRenderMixin":54,"./ReactWheelHandler":55,"./cssVar":61,"./cx":62,"./emptyFunction":64,"./translateDOMPositionXY":77}],57:[function(require,module,exports){
 /**
  * Copyright 2004-present Facebook. All Rights Reserved.
  *
@@ -9125,7 +11530,7 @@ var UserAgent_DEPRECATED = {
 };
 
 module.exports = UserAgent_DEPRECATED;
-},{}],56:[function(require,module,exports){
+},{}],58:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -9158,7 +11563,7 @@ function camelize(string) {
 }
 
 module.exports = camelize;
-},{}],57:[function(require,module,exports){
+},{}],59:[function(require,module,exports){
 (function (global){
 /**
  * Copyright (c) 2015, Facebook, Inc.
@@ -9181,7 +11586,7 @@ var cancelAnimationFrame = global.cancelAnimationFrame || global.webkitCancelAni
 
 module.exports = cancelAnimationFrame;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],58:[function(require,module,exports){
+},{}],60:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -9213,7 +11618,7 @@ function clamp(min, value, max) {
 }
 
 module.exports = clamp;
-},{}],59:[function(require,module,exports){
+},{}],61:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -9254,7 +11659,7 @@ function cssVar(name) {
 cssVar.CSS_VARS = CSS_VARS;
 
 module.exports = cssVar;
-},{}],60:[function(require,module,exports){
+},{}],62:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -9309,7 +11714,7 @@ function cx(classNames) {
 }
 
 module.exports = cx;
-},{}],61:[function(require,module,exports){
+},{}],63:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -9377,7 +11782,7 @@ function debounce(func, wait, context, setTimeoutFunc, clearTimeoutFunc) {
 }
 
 module.exports = debounce;
-},{}],62:[function(require,module,exports){
+},{}],64:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -9416,7 +11821,7 @@ emptyFunction.thatReturnsArgument = function (arg) {
 };
 
 module.exports = emptyFunction;
-},{}],63:[function(require,module,exports){
+},{}],65:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -9469,7 +11874,7 @@ function getVendorPrefixedName(property) {
 }
 
 module.exports = getVendorPrefixedName;
-},{"./ExecutionEnvironment":30,"./camelize":56,"./invariant":64}],64:[function(require,module,exports){
+},{"./ExecutionEnvironment":32,"./camelize":58,"./invariant":66}],66:[function(require,module,exports){
 (function (process){
 /**
  * Copyright (c) 2015, Facebook, Inc.
@@ -9521,7 +11926,7 @@ var invariant = function invariant(condition, format, a, b, c, d, e, f) {
 
 module.exports = invariant;
 }).call(this,require('_process'))
-},{"_process":26}],65:[function(require,module,exports){
+},{"_process":28}],67:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -9582,7 +11987,7 @@ function isEventSupported(eventNameSuffix, capture) {
 }
 
 module.exports = isEventSupported;
-},{"./ExecutionEnvironment":30}],66:[function(require,module,exports){
+},{"./ExecutionEnvironment":32}],68:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -9606,7 +12011,7 @@ function isNode(object) {
 }
 
 module.exports = isNode;
-},{}],67:[function(require,module,exports){
+},{}],69:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -9646,7 +12051,7 @@ function joinClasses(className /*, ... */) {
 }
 
 module.exports = joinClasses;
-},{}],68:[function(require,module,exports){
+},{}],70:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -9695,7 +12100,7 @@ var keyMirror = function keyMirror(obj) {
 };
 
 module.exports = keyMirror;
-},{"./invariant":64}],69:[function(require,module,exports){
+},{"./invariant":66}],71:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -9731,7 +12136,7 @@ var keyOf = function keyOf(oneKeyObj) {
 };
 
 module.exports = keyOf;
-},{}],70:[function(require,module,exports){
+},{}],72:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -9851,7 +12256,7 @@ var mergeHelpers = {
 };
 
 module.exports = mergeHelpers;
-},{"./invariant":64,"./keyMirror":68}],71:[function(require,module,exports){
+},{"./invariant":66,"./keyMirror":70}],73:[function(require,module,exports){
 (function (global){
 /**
  * Copyright (c) 2015, Facebook, Inc.
@@ -9870,7 +12275,7 @@ var nativeRequestAnimationFrame = global.requestAnimationFrame || global.webkitR
 
 module.exports = nativeRequestAnimationFrame;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],72:[function(require,module,exports){
+},{}],74:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -10067,7 +12472,7 @@ normalizeWheel.getEventType = function () /*string*/{
 };
 
 module.exports = normalizeWheel;
-},{"./UserAgent_DEPRECATED":55,"./isEventSupported":65}],73:[function(require,module,exports){
+},{"./UserAgent_DEPRECATED":57,"./isEventSupported":67}],75:[function(require,module,exports){
 (function (global){
 /**
  * Copyright (c) 2015, Facebook, Inc.
@@ -10105,7 +12510,7 @@ requestAnimationFrame(emptyFunction);
 
 module.exports = requestAnimationFrame;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./emptyFunction":62,"./nativeRequestAnimationFrame":71}],74:[function(require,module,exports){
+},{"./emptyFunction":64,"./nativeRequestAnimationFrame":73}],76:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -10154,7 +12559,7 @@ function shallowEqual(objA, objB) {
 }
 
 module.exports = shallowEqual;
-},{}],75:[function(require,module,exports){
+},{}],77:[function(require,module,exports){
 (function (global){
 /**
  * Copyright (c) 2015, Facebook, Inc.
@@ -10205,10 +12610,10 @@ var translateDOMPositionXY = (function () {
 
 module.exports = translateDOMPositionXY;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./BrowserSupportCore":27,"./getVendorPrefixedName":63}],76:[function(require,module,exports){
+},{"./BrowserSupportCore":29,"./getVendorPrefixedName":65}],78:[function(require,module,exports){
 module.exports = require('./internal/FixedDataTableRoot');
 
-},{"./internal/FixedDataTableRoot":39}],77:[function(require,module,exports){
+},{"./internal/FixedDataTableRoot":41}],79:[function(require,module,exports){
 /*jshint node:true */
 
 'use strict';
@@ -10300,7 +12705,7 @@ var CheckboxGroup = React.createClass({
 });
 
 module.exports = CheckboxGroup;
-},{"./mixins/component":83,"./row":86,"formsy-react":90,"react":"react"}],78:[function(require,module,exports){
+},{"./mixins/component":85,"./row":88,"formsy-react":92,"react":"react"}],80:[function(require,module,exports){
 /*jshint node:true */
 
 'use strict';
@@ -10376,7 +12781,7 @@ var Checkbox = React.createClass({
 });
 
 module.exports = Checkbox;
-},{"./mixins/component":83,"./row":86,"formsy-react":90,"react":"react"}],79:[function(require,module,exports){
+},{"./mixins/component":85,"./row":88,"formsy-react":92,"react":"react"}],81:[function(require,module,exports){
 'use strict';
 
 var React = require('react');
@@ -10401,7 +12806,7 @@ var Icon = React.createClass({
 });
 
 module.exports = Icon;
-},{"react":"react"}],80:[function(require,module,exports){
+},{"react":"react"}],82:[function(require,module,exports){
 /*jshint node:true */
 
 'use strict';
@@ -10474,7 +12879,7 @@ var File = React.createClass({
 });
 
 module.exports = File;
-},{"./icon":79,"./mixins/component":83,"./row":86,"formsy-react":90,"react":"react"}],81:[function(require,module,exports){
+},{"./icon":81,"./mixins/component":85,"./row":88,"formsy-react":92,"react":"react"}],83:[function(require,module,exports){
 /*jshint node:true */
 
 'use strict';
@@ -10555,7 +12960,7 @@ var Input = React.createClass({
 });
 
 module.exports = Input;
-},{"./icon":79,"./mixins/component":83,"./row":86,"formsy-react":90,"react":"react"}],82:[function(require,module,exports){
+},{"./icon":81,"./mixins/component":85,"./row":88,"formsy-react":92,"react":"react"}],84:[function(require,module,exports){
 'use strict';
 
 module.exports = {
@@ -10571,7 +12976,7 @@ module.exports = {
     ComponentMixin: require('./mixins/component'),
     ParentContextMixin: require('./mixins/parent-context')
 };
-},{"./checkbox":78,"./checkbox-group":77,"./icon":79,"./input":81,"./input-file":80,"./mixins/component":83,"./mixins/parent-context":84,"./radio-group":85,"./row":86,"./select":87,"./textarea":88}],83:[function(require,module,exports){
+},{"./checkbox":80,"./checkbox-group":79,"./icon":81,"./input":83,"./input-file":82,"./mixins/component":85,"./mixins/parent-context":86,"./radio-group":87,"./row":88,"./select":89,"./textarea":90}],85:[function(require,module,exports){
 'use strict';
 
 var React = require('react');
@@ -10648,7 +13053,7 @@ module.exports = {
         return this.isValid() === false;
     }
 };
-},{"react":"react"}],84:[function(require,module,exports){
+},{"react":"react"}],86:[function(require,module,exports){
 'use strict';
 
 var React = require('react');
@@ -10672,7 +13077,7 @@ module.exports = {
     }
 
 };
-},{"react":"react"}],85:[function(require,module,exports){
+},{"react":"react"}],87:[function(require,module,exports){
 /*jshint node:true */
 
 'use strict';
@@ -10776,7 +13181,7 @@ var RadioGroup = React.createClass({
 });
 
 module.exports = RadioGroup;
-},{"./mixins/component":83,"./row":86,"formsy-react":90,"react":"react"}],86:[function(require,module,exports){
+},{"./mixins/component":85,"./row":88,"formsy-react":92,"react":"react"}],88:[function(require,module,exports){
 /*jshint node:true */
 
 'use strict';
@@ -10881,7 +13286,7 @@ var Row = React.createClass({
 });
 
 module.exports = Row;
-},{"react":"react"}],87:[function(require,module,exports){
+},{"react":"react"}],89:[function(require,module,exports){
 /*jshint node:true */
 
 'use strict';
@@ -10961,7 +13366,7 @@ var Select = React.createClass({
 });
 
 module.exports = Select;
-},{"./mixins/component":83,"./row":86,"formsy-react":90,"react":"react"}],88:[function(require,module,exports){
+},{"./mixins/component":85,"./row":88,"formsy-react":92,"react":"react"}],90:[function(require,module,exports){
 /*jshint node:true */
 
 'use strict';
@@ -11030,7 +13435,7 @@ var Textarea = React.createClass({
 });
 
 module.exports = Textarea;
-},{"./mixins/component":83,"./row":86,"formsy-react":90,"react":"react"}],89:[function(require,module,exports){
+},{"./mixins/component":85,"./row":88,"formsy-react":92,"react":"react"}],91:[function(require,module,exports){
 var utils = require('./utils.js');
 
 var convertValidationsToObject = function (validations) {
@@ -11183,7 +13588,7 @@ module.exports = {
   }
 };
 
-},{"./utils.js":91}],90:[function(require,module,exports){
+},{"./utils.js":93}],92:[function(require,module,exports){
 (function (global){
 var React = global.React || require('react');
 var Formsy = {};
@@ -11640,7 +14045,7 @@ if (!global.exports && !global.module && (!global.define || !global.define.amd))
 module.exports = Formsy;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./Mixin.js":89,"./utils.js":91,"./validationRules.js":92,"react":"react"}],91:[function(require,module,exports){
+},{"./Mixin.js":91,"./utils.js":93,"./validationRules.js":94,"react":"react"}],93:[function(require,module,exports){
 module.exports = {
   arraysDiffer: function (a, b) {
     var isDifferent = false;
@@ -11683,7 +14088,7 @@ module.exports = {
   }
 };
 
-},{}],92:[function(require,module,exports){
+},{}],94:[function(require,module,exports){
 var isExisty = function (value) {
   return value !== null && value !== undefined;
 };
@@ -11759,7 +14164,1212 @@ var validations = {
 
 module.exports = validations;
 
-},{}],93:[function(require,module,exports){
+},{}],95:[function(require,module,exports){
+'use strict';
+
+var React = require('react');
+var classes = require('classnames');
+
+var Option = React.createClass({
+	displayName: 'Option',
+
+	propTypes: {
+		addLabelText: React.PropTypes.string, // string rendered in case of allowCreate option passed to ReactSelect
+		className: React.PropTypes.string, // className (based on mouse position)
+		mouseDown: React.PropTypes.func, // method to handle click on option element
+		mouseEnter: React.PropTypes.func, // method to handle mouseEnter on option element
+		mouseLeave: React.PropTypes.func, // method to handle mouseLeave on option element
+		option: React.PropTypes.object.isRequired, // object that is base for that option
+		renderFunc: React.PropTypes.func // method passed to ReactSelect component to render label text
+	},
+
+	blockEvent: function blockEvent(event) {
+		event.preventDefault();
+		if (event.target.tagName !== 'A' || !('href' in event.target)) {
+			return;
+		}
+
+		if (event.target.target) {
+			window.open(event.target.href);
+		} else {
+			window.location.href = event.target.href;
+		}
+	},
+
+	render: function render() {
+		var obj = this.props.option;
+		var renderedLabel = this.props.renderFunc(obj);
+		var optionClasses = classes(this.props.className, obj.className);
+
+		return obj.disabled ? React.createElement(
+			'div',
+			{ className: optionClasses,
+				onMouseDown: this.blockEvent,
+				onClick: this.blockEvent },
+			renderedLabel
+		) : React.createElement(
+			'div',
+			{ className: optionClasses,
+				style: obj.style,
+				onMouseEnter: this.props.mouseEnter,
+				onMouseLeave: this.props.mouseLeave,
+				onMouseDown: this.props.mouseDown,
+				onClick: this.props.mouseDown,
+				title: obj.title },
+			obj.create ? this.props.addLabelText.replace('{label}', obj.label) : renderedLabel
+		);
+	}
+});
+
+module.exports = Option;
+},{"classnames":99,"react":"react"}],96:[function(require,module,exports){
+/* disable some rules until we refactor more completely; fixing them now would
+   cause conflicts with some open PRs unnecessarily. */
+/* eslint react/jsx-sort-prop-types: 0, react/sort-comp: 0, react/prop-types: 0 */
+
+'use strict';
+
+var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
+var React = require('react');
+var Input = require('react-input-autosize');
+var classes = require('classnames');
+var Value = require('./Value');
+var SingleValue = require('./SingleValue');
+var Option = require('./Option');
+
+var requestId = 0;
+
+var Select = React.createClass({
+
+	displayName: 'Select',
+
+	propTypes: {
+		addLabelText: React.PropTypes.string, // placeholder displayed when you want to add a label on a multi-value input
+		allowCreate: React.PropTypes.bool, // whether to allow creation of new entries
+		asyncOptions: React.PropTypes.func, // function to call to get options
+		autoload: React.PropTypes.bool, // whether to auto-load the default async options set
+		backspaceRemoves: React.PropTypes.bool, // whether backspace removes an item if there is no text input
+		cacheAsyncResults: React.PropTypes.bool, // whether to allow cache
+		className: React.PropTypes.string, // className for the outer element
+		clearAllText: React.PropTypes.string, // title for the "clear" control when multi: true
+		clearValueText: React.PropTypes.string, // title for the "clear" control
+		clearable: React.PropTypes.bool, // should it be possible to reset value
+		delimiter: React.PropTypes.string, // delimiter to use to join multiple values
+		disabled: React.PropTypes.bool, // whether the Select is disabled or not
+		filterOption: React.PropTypes.func, // method to filter a single option: function(option, filterString)
+		filterOptions: React.PropTypes.func, // method to filter the options array: function([options], filterString, [values])
+		ignoreCase: React.PropTypes.bool, // whether to perform case-insensitive filtering
+		inputProps: React.PropTypes.object, // custom attributes for the Input (in the Select-control) e.g: {'data-foo': 'bar'}
+		matchPos: React.PropTypes.string, // (any|start) match the start or entire string when filtering
+		matchProp: React.PropTypes.string, // (any|label|value) which option property to filter on
+		multi: React.PropTypes.bool, // multi-value input
+		name: React.PropTypes.string, // field name, for hidden <input /> tag
+		newOptionCreator: React.PropTypes.func, // factory to create new options when allowCreate set
+		noResultsText: React.PropTypes.string, // placeholder displayed when there are no matching search results
+		onBlur: React.PropTypes.func, // onBlur handler: function(event) {}
+		onChange: React.PropTypes.func, // onChange handler: function(newValue) {}
+		onFocus: React.PropTypes.func, // onFocus handler: function(event) {}
+		onOptionLabelClick: React.PropTypes.func, // onCLick handler for value labels: function (value, event) {}
+		optionComponent: React.PropTypes.func, // option component to render in dropdown
+		optionRenderer: React.PropTypes.func, // optionRenderer: function(option) {}
+		options: React.PropTypes.array, // array of options
+		placeholder: React.PropTypes.string, // field placeholder, displayed when there's no value
+		searchable: React.PropTypes.bool, // whether to enable searching feature or not
+		searchingText: React.PropTypes.string, // message to display whilst options are loading via asyncOptions
+		searchPromptText: React.PropTypes.string, // label to prompt for search input
+		singleValueComponent: React.PropTypes.func, // single value component when multiple is set to false
+		value: React.PropTypes.any, // initial field value
+		valueComponent: React.PropTypes.func, // value component to render in multiple mode
+		valueRenderer: React.PropTypes.func // valueRenderer: function(option) {}
+	},
+
+	getDefaultProps: function getDefaultProps() {
+		return {
+			addLabelText: 'Add "{label}"?',
+			allowCreate: false,
+			asyncOptions: undefined,
+			autoload: true,
+			backspaceRemoves: true,
+			cacheAsyncResults: true,
+			className: undefined,
+			clearAllText: 'Clear all',
+			clearValueText: 'Clear value',
+			clearable: true,
+			delimiter: ',',
+			disabled: false,
+			ignoreCase: true,
+			inputProps: {},
+			matchPos: 'any',
+			matchProp: 'any',
+			name: undefined,
+			newOptionCreator: undefined,
+			noResultsText: 'No results found',
+			onChange: undefined,
+			onOptionLabelClick: undefined,
+			optionComponent: Option,
+			options: undefined,
+			placeholder: 'Select...',
+			searchable: true,
+			searchingText: 'Searching...',
+			searchPromptText: 'Type to search',
+			singleValueComponent: SingleValue,
+			value: undefined,
+			valueComponent: Value
+		};
+	},
+
+	getInitialState: function getInitialState() {
+		return {
+			/*
+    * set by getStateFromValue on componentWillMount:
+    * - value
+    * - values
+    * - filteredOptions
+    * - inputValue
+    * - placeholder
+    * - focusedOption
+   */
+			isFocused: false,
+			isLoading: false,
+			isOpen: false,
+			options: this.props.options
+		};
+	},
+
+	componentWillMount: function componentWillMount() {
+		var _this = this;
+
+		this._optionsCache = {};
+		this._optionsFilterString = '';
+		this._closeMenuIfClickedOutside = function (event) {
+			if (!_this.state.isOpen) {
+				return;
+			}
+			var menuElem = React.findDOMNode(_this.refs.selectMenuContainer);
+			var controlElem = React.findDOMNode(_this.refs.control);
+
+			var eventOccuredOutsideMenu = _this.clickedOutsideElement(menuElem, event);
+			var eventOccuredOutsideControl = _this.clickedOutsideElement(controlElem, event);
+
+			// Hide dropdown menu if click occurred outside of menu
+			if (eventOccuredOutsideMenu && eventOccuredOutsideControl) {
+				_this.setState({
+					isOpen: false
+				}, _this._unbindCloseMenuIfClickedOutside);
+			}
+		};
+		this._bindCloseMenuIfClickedOutside = function () {
+			if (!document.addEventListener && document.attachEvent) {
+				document.attachEvent('onclick', this._closeMenuIfClickedOutside);
+			} else {
+				document.addEventListener('click', this._closeMenuIfClickedOutside);
+			}
+		};
+		this._unbindCloseMenuIfClickedOutside = function () {
+			if (!document.removeEventListener && document.detachEvent) {
+				document.detachEvent('onclick', this._closeMenuIfClickedOutside);
+			} else {
+				document.removeEventListener('click', this._closeMenuIfClickedOutside);
+			}
+		};
+		this.setState(this.getStateFromValue(this.props.value));
+	},
+
+	componentDidMount: function componentDidMount() {
+		if (this.props.asyncOptions && this.props.autoload) {
+			this.autoloadAsyncOptions();
+		}
+	},
+
+	componentWillUnmount: function componentWillUnmount() {
+		clearTimeout(this._blurTimeout);
+		clearTimeout(this._focusTimeout);
+		if (this.state.isOpen) {
+			this._unbindCloseMenuIfClickedOutside();
+		}
+	},
+
+	componentWillReceiveProps: function componentWillReceiveProps(newProps) {
+		var _this2 = this;
+
+		var optionsChanged = false;
+		if (JSON.stringify(newProps.options) !== JSON.stringify(this.props.options)) {
+			optionsChanged = true;
+			this.setState({
+				options: newProps.options,
+				filteredOptions: this.filterOptions(newProps.options)
+			});
+		}
+		if (newProps.value !== this.state.value || newProps.placeholder !== this.props.placeholder || optionsChanged) {
+			var setState = function setState(newState) {
+				_this2.setState(_this2.getStateFromValue(newProps.value, newState && newState.options || newProps.options, newProps.placeholder));
+			};
+			if (this.props.asyncOptions) {
+				this.loadAsyncOptions(newProps.value, {}, setState);
+			} else {
+				setState();
+			}
+		}
+	},
+
+	componentDidUpdate: function componentDidUpdate() {
+		var _this3 = this;
+
+		if (!this.props.disabled && this._focusAfterUpdate) {
+			clearTimeout(this._blurTimeout);
+			this._focusTimeout = setTimeout(function () {
+				_this3.getInputNode().focus();
+				_this3._focusAfterUpdate = false;
+			}, 50);
+		}
+		if (this._focusedOptionReveal) {
+			if (this.refs.focused && this.refs.menu) {
+				var focusedDOM = React.findDOMNode(this.refs.focused);
+				var menuDOM = React.findDOMNode(this.refs.menu);
+				var focusedRect = focusedDOM.getBoundingClientRect();
+				var menuRect = menuDOM.getBoundingClientRect();
+
+				if (focusedRect.bottom > menuRect.bottom || focusedRect.top < menuRect.top) {
+					menuDOM.scrollTop = focusedDOM.offsetTop + focusedDOM.clientHeight - menuDOM.offsetHeight;
+				}
+			}
+			this._focusedOptionReveal = false;
+		}
+	},
+
+	focus: function focus() {
+		this.getInputNode().focus();
+	},
+
+	clickedOutsideElement: function clickedOutsideElement(element, event) {
+		var eventTarget = event.target ? event.target : event.srcElement;
+		while (eventTarget != null) {
+			if (eventTarget === element) return false;
+			eventTarget = eventTarget.offsetParent;
+		}
+		return true;
+	},
+
+	getStateFromValue: function getStateFromValue(value, options, placeholder) {
+		if (!options) {
+			options = this.state.options;
+		}
+		if (!placeholder) {
+			placeholder = this.props.placeholder;
+		}
+
+		// reset internal filter string
+		this._optionsFilterString = '';
+
+		var values = this.initValuesArray(value, options);
+		var filteredOptions = this.filterOptions(options, values);
+
+		var focusedOption;
+		var valueForState = null;
+		if (!this.props.multi && values.length) {
+			focusedOption = values[0];
+			valueForState = values[0].value;
+		} else {
+			focusedOption = this.getFirstFocusableOption(filteredOptions);
+			valueForState = values.map(function (v) {
+				return v.value;
+			}).join(this.props.delimiter);
+		}
+
+		return {
+			value: valueForState,
+			values: values,
+			inputValue: '',
+			filteredOptions: filteredOptions,
+			placeholder: !this.props.multi && values.length ? values[0].label : placeholder,
+			focusedOption: focusedOption
+		};
+	},
+
+	getFirstFocusableOption: function getFirstFocusableOption(options) {
+
+		for (var optionIndex = 0; optionIndex < options.length; ++optionIndex) {
+			if (!options[optionIndex].disabled) {
+				return options[optionIndex];
+			}
+		}
+	},
+
+	initValuesArray: function initValuesArray(values, options) {
+		if (!Array.isArray(values)) {
+			if (typeof values === 'string') {
+				values = values === '' ? [] : values.split(this.props.delimiter);
+			} else {
+				values = values !== undefined && values !== null ? [values] : [];
+			}
+		}
+		return values.map(function (val) {
+			if (typeof val === 'string' || typeof val === 'number') {
+				for (var key in options) {
+					if (options.hasOwnProperty(key) && options[key] && (options[key].value === val || typeof options[key].value === 'number' && options[key].value.toString() === val)) {
+						return options[key];
+					}
+				}
+				return { value: val, label: val };
+			} else {
+				return val;
+			}
+		});
+	},
+
+	setValue: function setValue(value, focusAfterUpdate) {
+		if (focusAfterUpdate || focusAfterUpdate === undefined) {
+			this._focusAfterUpdate = true;
+		}
+		var newState = this.getStateFromValue(value);
+		newState.isOpen = false;
+		this.fireChangeEvent(newState);
+		this.setState(newState);
+	},
+
+	selectValue: function selectValue(value) {
+		if (!this.props.multi) {
+			this.setValue(value);
+		} else if (value) {
+			this.addValue(value);
+		}
+		this._unbindCloseMenuIfClickedOutside();
+	},
+
+	addValue: function addValue(value) {
+		this.setValue(this.state.values.concat(value));
+	},
+
+	popValue: function popValue() {
+		this.setValue(this.state.values.slice(0, this.state.values.length - 1));
+	},
+
+	removeValue: function removeValue(valueToRemove) {
+		this.setValue(this.state.values.filter(function (value) {
+			return value !== valueToRemove;
+		}));
+	},
+
+	clearValue: function clearValue(event) {
+		// if the event was triggered by a mousedown and not the primary
+		// button, ignore it.
+		if (event && event.type === 'mousedown' && event.button !== 0) {
+			return;
+		}
+		event.stopPropagation();
+		event.preventDefault();
+		this.setValue(null);
+	},
+
+	resetValue: function resetValue() {
+		this.setValue(this.state.value === '' ? null : this.state.value);
+	},
+
+	getInputNode: function getInputNode() {
+		var input = this.refs.input;
+		return this.props.searchable ? input : React.findDOMNode(input);
+	},
+
+	fireChangeEvent: function fireChangeEvent(newState) {
+		if (newState.value !== this.state.value && this.props.onChange) {
+			this.props.onChange(newState.value, newState.values);
+		}
+	},
+
+	handleMouseDown: function handleMouseDown(event) {
+		// if the event was triggered by a mousedown and not the primary
+		// button, or if the component is disabled, ignore it.
+		if (this.props.disabled || event.type === 'mousedown' && event.button !== 0) {
+			return;
+		}
+		event.stopPropagation();
+		event.preventDefault();
+
+		// for the non-searchable select, close the dropdown when button is clicked
+		if (this.state.isOpen && !this.props.searchable) {
+			this.setState({
+				isOpen: false
+			}, this._unbindCloseMenuIfClickedOutside);
+			return;
+		}
+
+		if (this.state.isFocused) {
+			this.setState({
+				isOpen: true
+			}, this._bindCloseMenuIfClickedOutside);
+		} else {
+			this._openAfterFocus = true;
+			this.getInputNode().focus();
+		}
+	},
+
+	handleMouseDownOnArrow: function handleMouseDownOnArrow(event) {
+		// if the event was triggered by a mousedown and not the primary
+		// button, or if the component is disabled, ignore it.
+		if (this.props.disabled || event.type === 'mousedown' && event.button !== 0) {
+			return;
+		}
+		// If not focused, handleMouseDown will handle it
+		if (!this.state.isOpen) {
+			return;
+		}
+		event.stopPropagation();
+		event.preventDefault();
+		this.setState({
+			isOpen: false
+		}, this._unbindCloseMenuIfClickedOutside);
+	},
+
+	handleInputFocus: function handleInputFocus(event) {
+		var newIsOpen = this.state.isOpen || this._openAfterFocus;
+		this.setState({
+			isFocused: true,
+			isOpen: newIsOpen
+		}, function () {
+			if (newIsOpen) {
+				this._bindCloseMenuIfClickedOutside();
+			} else {
+				this._unbindCloseMenuIfClickedOutside();
+			}
+		});
+		this._openAfterFocus = false;
+		if (this.props.onFocus) {
+			this.props.onFocus(event);
+		}
+	},
+
+	handleInputBlur: function handleInputBlur(event) {
+		var _this4 = this;
+
+		this._blurTimeout = setTimeout(function () {
+			if (_this4._focusAfterUpdate) return;
+			_this4.setState({
+				isFocused: false,
+				isOpen: false
+			});
+		}, 50);
+		if (this.props.onBlur) {
+			this.props.onBlur(event);
+		}
+	},
+
+	handleKeyDown: function handleKeyDown(event) {
+		if (this.props.disabled) return;
+		switch (event.keyCode) {
+			case 8:
+				// backspace
+				if (!this.state.inputValue && this.props.backspaceRemoves) {
+					this.popValue();
+				}
+				return;
+			case 9:
+				// tab
+				if (event.shiftKey || !this.state.isOpen || !this.state.focusedOption) {
+					return;
+				}
+				this.selectFocusedOption();
+				break;
+			case 13:
+				// enter
+				if (!this.state.isOpen) return;
+
+				this.selectFocusedOption();
+				break;
+			case 27:
+				// escape
+				if (this.state.isOpen) {
+					this.resetValue();
+				} else if (this.props.clearable) {
+					this.clearValue(event);
+				}
+				break;
+			case 38:
+				// up
+				this.focusPreviousOption();
+				break;
+			case 40:
+				// down
+				this.focusNextOption();
+				break;
+			case 188:
+				// ,
+				if (this.props.allowCreate && this.props.multi) {
+					event.preventDefault();
+					event.stopPropagation();
+					this.selectFocusedOption();
+				} else {
+					return;
+				}
+				break;
+			default:
+				return;
+		}
+		event.preventDefault();
+	},
+
+	// Ensures that the currently focused option is available in filteredOptions.
+	// If not, returns the first available option.
+	_getNewFocusedOption: function _getNewFocusedOption(filteredOptions) {
+		for (var key in filteredOptions) {
+			if (filteredOptions.hasOwnProperty(key) && filteredOptions[key] === this.state.focusedOption) {
+				return filteredOptions[key];
+			}
+		}
+		return this.getFirstFocusableOption(filteredOptions);
+	},
+
+	handleInputChange: function handleInputChange(event) {
+		// assign an internal variable because we need to use
+		// the latest value before setState() has completed.
+		this._optionsFilterString = event.target.value;
+
+		if (this.props.asyncOptions) {
+			this.setState({
+				isLoading: true,
+				inputValue: event.target.value
+			});
+			this.loadAsyncOptions(event.target.value, {
+				isLoading: false,
+				isOpen: true
+			}, this._bindCloseMenuIfClickedOutside);
+		} else {
+			var filteredOptions = this.filterOptions(this.state.options);
+			this.setState({
+				isOpen: true,
+				inputValue: event.target.value,
+				filteredOptions: filteredOptions,
+				focusedOption: this._getNewFocusedOption(filteredOptions)
+			}, this._bindCloseMenuIfClickedOutside);
+		}
+	},
+
+	autoloadAsyncOptions: function autoloadAsyncOptions() {
+		var _this5 = this;
+
+		this.loadAsyncOptions(this.props.value || '', {}, function () {
+			// update with fetched but don't focus
+			_this5.setValue(_this5.props.value, false);
+		});
+	},
+
+	loadAsyncOptions: function loadAsyncOptions(input, state, callback) {
+		var _this6 = this;
+
+		var thisRequestId = this._currentRequestId = requestId++;
+		if (this.props.cacheAsyncResults) {
+			for (var i = 0; i <= input.length; i++) {
+				var cacheKey = input.slice(0, i);
+				if (this._optionsCache[cacheKey] && (input === cacheKey || this._optionsCache[cacheKey].complete)) {
+					var options = this._optionsCache[cacheKey].options;
+					var filteredOptions = this.filterOptions(options);
+					var newState = {
+						options: options,
+						filteredOptions: filteredOptions,
+						focusedOption: this._getNewFocusedOption(filteredOptions)
+					};
+					for (var key in state) {
+						if (state.hasOwnProperty(key)) {
+							newState[key] = state[key];
+						}
+					}
+					this.setState(newState);
+					if (callback) callback.call(this, newState);
+					return;
+				}
+			}
+		}
+
+		this.props.asyncOptions(input, function (err, data) {
+			if (err) throw err;
+			if (_this6.props.cacheAsyncResults) {
+				_this6._optionsCache[input] = data;
+			}
+			if (thisRequestId !== _this6._currentRequestId) {
+				return;
+			}
+			var filteredOptions = _this6.filterOptions(data.options);
+			var newState = {
+				options: data.options,
+				filteredOptions: filteredOptions,
+				focusedOption: _this6._getNewFocusedOption(filteredOptions)
+			};
+			for (var key in state) {
+				if (state.hasOwnProperty(key)) {
+					newState[key] = state[key];
+				}
+			}
+			_this6.setState(newState);
+			if (callback) callback.call(_this6, newState);
+		});
+	},
+
+	filterOptions: function filterOptions(options, values) {
+		var filterValue = this._optionsFilterString;
+		var exclude = (values || this.state.values).map(function (i) {
+			return i.value;
+		});
+		if (this.props.filterOptions) {
+			return this.props.filterOptions.call(this, options, filterValue, exclude);
+		} else {
+			var filterOption = function filterOption(op) {
+				if (this.props.multi && exclude.indexOf(op.value) > -1) return false;
+				if (this.props.filterOption) return this.props.filterOption.call(this, op, filterValue);
+				var valueTest = String(op.value),
+				    labelTest = String(op.label);
+				if (this.props.ignoreCase) {
+					valueTest = valueTest.toLowerCase();
+					labelTest = labelTest.toLowerCase();
+					filterValue = filterValue.toLowerCase();
+				}
+				return !filterValue || this.props.matchPos === 'start' ? this.props.matchProp !== 'label' && valueTest.substr(0, filterValue.length) === filterValue || this.props.matchProp !== 'value' && labelTest.substr(0, filterValue.length) === filterValue : this.props.matchProp !== 'label' && valueTest.indexOf(filterValue) >= 0 || this.props.matchProp !== 'value' && labelTest.indexOf(filterValue) >= 0;
+			};
+			return (options || []).filter(filterOption, this);
+		}
+	},
+
+	selectFocusedOption: function selectFocusedOption() {
+		if (this.props.allowCreate && !this.state.focusedOption) {
+			return this.selectValue(this.state.inputValue);
+		}
+
+		if (this.state.focusedOption) {
+			return this.selectValue(this.state.focusedOption);
+		}
+	},
+
+	focusOption: function focusOption(op) {
+		this.setState({
+			focusedOption: op
+		});
+	},
+
+	focusNextOption: function focusNextOption() {
+		this.focusAdjacentOption('next');
+	},
+
+	focusPreviousOption: function focusPreviousOption() {
+		this.focusAdjacentOption('previous');
+	},
+
+	focusAdjacentOption: function focusAdjacentOption(dir) {
+		this._focusedOptionReveal = true;
+		var ops = this.state.filteredOptions.filter(function (op) {
+			return !op.disabled;
+		});
+		if (!this.state.isOpen) {
+			this.setState({
+				isOpen: true,
+				inputValue: '',
+				focusedOption: this.state.focusedOption || ops[dir === 'next' ? 0 : ops.length - 1]
+			}, this._bindCloseMenuIfClickedOutside);
+			return;
+		}
+		if (!ops.length) {
+			return;
+		}
+		var focusedIndex = -1;
+		for (var i = 0; i < ops.length; i++) {
+			if (this.state.focusedOption === ops[i]) {
+				focusedIndex = i;
+				break;
+			}
+		}
+		var focusedOption = ops[0];
+		if (dir === 'next' && focusedIndex > -1 && focusedIndex < ops.length - 1) {
+			focusedOption = ops[focusedIndex + 1];
+		} else if (dir === 'previous') {
+			if (focusedIndex > 0) {
+				focusedOption = ops[focusedIndex - 1];
+			} else {
+				focusedOption = ops[ops.length - 1];
+			}
+		}
+		this.setState({
+			focusedOption: focusedOption
+		});
+	},
+
+	unfocusOption: function unfocusOption(op) {
+		if (this.state.focusedOption === op) {
+			this.setState({
+				focusedOption: null
+			});
+		}
+	},
+
+	buildMenu: function buildMenu() {
+		var focusedValue = this.state.focusedOption ? this.state.focusedOption.value : null;
+		var renderLabel = this.props.optionRenderer || function (op) {
+			return op.label;
+		};
+		if (this.state.filteredOptions.length > 0) {
+			focusedValue = focusedValue == null ? this.state.filteredOptions[0] : focusedValue;
+		}
+		// Add the current value to the filtered options in last resort
+		var options = this.state.filteredOptions;
+		if (this.props.allowCreate && this.state.inputValue.trim()) {
+			var inputValue = this.state.inputValue;
+			options = options.slice();
+			var newOption = this.props.newOptionCreator ? this.props.newOptionCreator(inputValue) : {
+				value: inputValue,
+				label: inputValue,
+				create: true
+			};
+			options.unshift(newOption);
+		}
+		var ops = Object.keys(options).map(function (key) {
+			var op = options[key];
+			var isSelected = this.state.value === op.value;
+			var isFocused = focusedValue === op.value;
+			var optionClass = classes({
+				'Select-option': true,
+				'is-selected': isSelected,
+				'is-focused': isFocused,
+				'is-disabled': op.disabled
+			});
+			var ref = isFocused ? 'focused' : null;
+			var mouseEnter = this.focusOption.bind(this, op);
+			var mouseLeave = this.unfocusOption.bind(this, op);
+			var mouseDown = this.selectValue.bind(this, op);
+			var optionResult = React.createElement(this.props.optionComponent, {
+				key: 'option-' + op.value,
+				className: optionClass,
+				renderFunc: renderLabel,
+				mouseEnter: mouseEnter,
+				mouseLeave: mouseLeave,
+				mouseDown: mouseDown,
+				click: mouseDown,
+				addLabelText: this.props.addLabelText,
+				option: op,
+				ref: ref
+			});
+			return optionResult;
+		}, this);
+
+		if (ops.length) {
+			return ops;
+		} else {
+			var noResultsText, promptClass;
+			if (this.state.isLoading) {
+				promptClass = 'Select-searching';
+				noResultsText = this.props.searchingText;
+			} else if (this.state.inputValue || !this.props.asyncOptions) {
+				promptClass = 'Select-noresults';
+				noResultsText = this.props.noResultsText;
+			} else {
+				promptClass = 'Select-search-prompt';
+				noResultsText = this.props.searchPromptText;
+			}
+
+			return React.createElement(
+				'div',
+				{ className: promptClass },
+				noResultsText
+			);
+		}
+	},
+
+	handleOptionLabelClick: function handleOptionLabelClick(value, event) {
+		if (this.props.onOptionLabelClick) {
+			this.props.onOptionLabelClick(value, event);
+		}
+	},
+
+	render: function render() {
+		var selectClass = classes('Select', this.props.className, {
+			'is-multi': this.props.multi,
+			'is-searchable': this.props.searchable,
+			'is-open': this.state.isOpen,
+			'is-focused': this.state.isFocused,
+			'is-loading': this.state.isLoading,
+			'is-disabled': this.props.disabled,
+			'has-value': this.state.value
+		});
+		var value = [];
+		if (this.props.multi) {
+			this.state.values.forEach(function (val) {
+				var onOptionLabelClick = this.handleOptionLabelClick.bind(this, val);
+				var onRemove = this.removeValue.bind(this, val);
+				var valueComponent = React.createElement(this.props.valueComponent, {
+					key: val.value,
+					option: val,
+					renderer: this.props.valueRenderer,
+					optionLabelClick: !!this.props.onOptionLabelClick,
+					onOptionLabelClick: onOptionLabelClick,
+					onRemove: onRemove,
+					disabled: this.props.disabled
+				});
+				value.push(valueComponent);
+			}, this);
+		}
+
+		if (!this.state.inputValue && (!this.props.multi || !value.length)) {
+			var val = this.state.values[0] || null;
+			if (this.props.valueRenderer && !!this.state.values.length) {
+				value.push(React.createElement(Value, {
+					key: 0,
+					option: val,
+					renderer: this.props.valueRenderer,
+					disabled: this.props.disabled }));
+			} else {
+				var singleValueComponent = React.createElement(this.props.singleValueComponent, {
+					key: 'placeholder',
+					value: val,
+					placeholder: this.state.placeholder
+				});
+				value.push(singleValueComponent);
+			}
+		}
+
+		var loading = this.state.isLoading ? React.createElement('span', { className: 'Select-loading', 'aria-hidden': 'true' }) : null;
+		var clear = this.props.clearable && this.state.value && !this.props.disabled ? React.createElement('span', { className: 'Select-clear', title: this.props.multi ? this.props.clearAllText : this.props.clearValueText, 'aria-label': this.props.multi ? this.props.clearAllText : this.props.clearValueText, onMouseDown: this.clearValue, onClick: this.clearValue, dangerouslySetInnerHTML: { __html: '&times;' } }) : null;
+
+		var menu;
+		var menuProps;
+		if (this.state.isOpen) {
+			menuProps = {
+				ref: 'menu',
+				className: 'Select-menu',
+				onMouseDown: this.handleMouseDown
+			};
+			menu = React.createElement(
+				'div',
+				{ ref: 'selectMenuContainer', className: 'Select-menu-outer' },
+				React.createElement(
+					'div',
+					menuProps,
+					this.buildMenu()
+				)
+			);
+		}
+
+		var input;
+		var inputProps = {
+			ref: 'input',
+			className: 'Select-input ' + (this.props.inputProps.className || ''),
+			tabIndex: this.props.tabIndex || 0,
+			onFocus: this.handleInputFocus,
+			onBlur: this.handleInputBlur
+		};
+		for (var key in this.props.inputProps) {
+			if (this.props.inputProps.hasOwnProperty(key) && key !== 'className') {
+				inputProps[key] = this.props.inputProps[key];
+			}
+		}
+
+		if (!this.props.disabled) {
+			if (this.props.searchable) {
+				input = React.createElement(Input, _extends({ value: this.state.inputValue, onChange: this.handleInputChange, minWidth: '5' }, inputProps));
+			} else {
+				input = React.createElement(
+					'div',
+					inputProps,
+					' '
+				);
+			}
+		} else if (!this.props.multi || !this.state.values.length) {
+			input = React.createElement(
+				'div',
+				{ className: 'Select-input' },
+				' '
+			);
+		}
+
+		return React.createElement(
+			'div',
+			{ ref: 'wrapper', className: selectClass },
+			React.createElement('input', { type: 'hidden', ref: 'value', name: this.props.name, value: this.state.value, disabled: this.props.disabled }),
+			React.createElement(
+				'div',
+				{ className: 'Select-control', ref: 'control', onKeyDown: this.handleKeyDown, onMouseDown: this.handleMouseDown, onTouchEnd: this.handleMouseDown },
+				value,
+				input,
+				React.createElement('span', { className: 'Select-arrow-zone', onMouseDown: this.handleMouseDownOnArrow }),
+				React.createElement('span', { className: 'Select-arrow', onMouseDown: this.handleMouseDownOnArrow }),
+				loading,
+				clear
+			),
+			menu
+		);
+	}
+
+});
+
+module.exports = Select;
+},{"./Option":95,"./SingleValue":97,"./Value":98,"classnames":99,"react":"react","react-input-autosize":100}],97:[function(require,module,exports){
+'use strict';
+
+var React = require('react');
+var classes = require('classnames');
+
+var SingleValue = React.createClass({
+	displayName: 'SingleValue',
+
+	propTypes: {
+		placeholder: React.PropTypes.string, // this is default value provided by React-Select based component
+		value: React.PropTypes.object // selected option
+	},
+	render: function render() {
+
+		var classNames = classes('Select-placeholder', this.props.value && this.props.value.className);
+		return React.createElement(
+			'div',
+			{
+				className: classNames,
+				style: this.props.value && this.props.value.style,
+				title: this.props.value && this.props.value.title
+			},
+			this.props.placeholder
+		);
+	}
+});
+
+module.exports = SingleValue;
+},{"classnames":99,"react":"react"}],98:[function(require,module,exports){
+'use strict';
+
+var React = require('react');
+var classes = require('classnames');
+
+var Value = React.createClass({
+
+	displayName: 'Value',
+
+	propTypes: {
+		disabled: React.PropTypes.bool, // disabled prop passed to ReactSelect
+		onOptionLabelClick: React.PropTypes.func, // method to handle click on value label
+		onRemove: React.PropTypes.func, // method to handle remove of that value
+		option: React.PropTypes.object.isRequired, // option passed to component
+		optionLabelClick: React.PropTypes.bool, // indicates if onOptionLabelClick should be handled
+		renderer: React.PropTypes.func // method to render option label passed to ReactSelect
+	},
+
+	blockEvent: function blockEvent(event) {
+		event.stopPropagation();
+	},
+
+	handleOnRemove: function handleOnRemove(event) {
+		if (!this.props.disabled) {
+			this.props.onRemove(event);
+		}
+	},
+
+	render: function render() {
+		var label = this.props.option.label;
+		if (this.props.renderer) {
+			label = this.props.renderer(this.props.option);
+		}
+
+		if (!this.props.onRemove && !this.props.optionLabelClick) {
+			return React.createElement(
+				'div',
+				{
+					className: classes('Select-value', this.props.option.className),
+					style: this.props.option.style,
+					title: this.props.option.title
+				},
+				label
+			);
+		}
+
+		if (this.props.optionLabelClick) {
+
+			label = React.createElement(
+				'a',
+				{ className: classes('Select-item-label__a', this.props.option.className),
+					onMouseDown: this.blockEvent,
+					onTouchEnd: this.props.onOptionLabelClick,
+					onClick: this.props.onOptionLabelClick,
+					style: this.props.option.style,
+					title: this.props.option.title },
+				label
+			);
+		}
+
+		return React.createElement(
+			'div',
+			{ className: classes('Select-item', this.props.option.className),
+				style: this.props.option.style,
+				title: this.props.option.title },
+			React.createElement(
+				'span',
+				{ className: 'Select-item-icon',
+					onMouseDown: this.blockEvent,
+					onClick: this.handleOnRemove,
+					onTouchEnd: this.handleOnRemove },
+				'×'
+			),
+			React.createElement(
+				'span',
+				{ className: 'Select-item-label' },
+				label
+			)
+		);
+	}
+
+});
+
+module.exports = Value;
+},{"classnames":99,"react":"react"}],99:[function(require,module,exports){
+/*!
+  Copyright (c) 2015 Jed Watson.
+  Licensed under the MIT License (MIT), see
+  http://jedwatson.github.io/classnames
+*/
+
+(function () {
+	'use strict';
+
+	function classNames () {
+
+		var classes = '';
+
+		for (var i = 0; i < arguments.length; i++) {
+			var arg = arguments[i];
+			if (!arg) continue;
+
+			var argType = typeof arg;
+
+			if ('string' === argType || 'number' === argType) {
+				classes += ' ' + arg;
+
+			} else if (Array.isArray(arg)) {
+				classes += ' ' + classNames.apply(null, arg);
+
+			} else if ('object' === argType) {
+				for (var key in arg) {
+					if (arg.hasOwnProperty(key) && arg[key]) {
+						classes += ' ' + key;
+					}
+				}
+			}
+		}
+
+		return classes.substr(1);
+	}
+
+	if (typeof module !== 'undefined' && module.exports) {
+		module.exports = classNames;
+	} else if (typeof define === 'function' && typeof define.amd === 'object' && define.amd){
+		// AMD. Register as an anonymous module.
+		define(function () {
+			return classNames;
+		});
+	} else {
+		window.classNames = classNames;
+	}
+
+}());
+
+},{}],100:[function(require,module,exports){
+'use strict';
+
+var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
+var React = require('react');
+
+var sizerStyle = { position: 'absolute', visibility: 'hidden', height: 0, width: 0, overflow: 'scroll', whiteSpace: 'nowrap' };
+
+var AutosizeInput = React.createClass({
+	displayName: 'AutosizeInput',
+
+	propTypes: {
+		value: React.PropTypes.any, // field value
+		defaultValue: React.PropTypes.any, // default field value
+		onChange: React.PropTypes.func, // onChange handler: function(newValue) {}
+		style: React.PropTypes.object, // css styles for the outer element
+		className: React.PropTypes.string, // className for the outer element
+		minWidth: React.PropTypes.oneOfType([// minimum width for input element
+		React.PropTypes.number, React.PropTypes.string]),
+		inputStyle: React.PropTypes.object, // css styles for the input element
+		inputClassName: React.PropTypes.string // className for the input element
+	},
+	getDefaultProps: function getDefaultProps() {
+		return {
+			minWidth: 1
+		};
+	},
+	getInitialState: function getInitialState() {
+		return {
+			inputWidth: this.props.minWidth
+		};
+	},
+	componentDidMount: function componentDidMount() {
+		this.copyInputStyles();
+		this.updateInputWidth();
+	},
+	componentDidUpdate: function componentDidUpdate() {
+		this.updateInputWidth();
+	},
+	copyInputStyles: function copyInputStyles() {
+		if (!this.isMounted() || !window.getComputedStyle) {
+			return;
+		}
+		var inputStyle = window.getComputedStyle(React.findDOMNode(this.refs.input));
+		var widthNode = React.findDOMNode(this.refs.sizer);
+		widthNode.style.fontSize = inputStyle.fontSize;
+		widthNode.style.fontFamily = inputStyle.fontFamily;
+		widthNode.style.letterSpacing = inputStyle.letterSpacing;
+		if (this.props.placeholder) {
+			var placeholderNode = React.findDOMNode(this.refs.placeholderSizer);
+			placeholderNode.style.fontSize = inputStyle.fontSize;
+			placeholderNode.style.fontFamily = inputStyle.fontFamily;
+			placeholderNode.style.letterSpacing = inputStyle.letterSpacing;
+		}
+	},
+	updateInputWidth: function updateInputWidth() {
+		if (!this.isMounted() || typeof React.findDOMNode(this.refs.sizer).scrollWidth === 'undefined') {
+			return;
+		}
+		var newInputWidth;
+		if (this.props.placeholder) {
+			newInputWidth = Math.max(React.findDOMNode(this.refs.sizer).scrollWidth, React.findDOMNode(this.refs.placeholderSizer).scrollWidth) + 2;
+		} else {
+			newInputWidth = React.findDOMNode(this.refs.sizer).scrollWidth + 2;
+		}
+		if (newInputWidth < this.props.minWidth) {
+			newInputWidth = this.props.minWidth;
+		}
+		if (newInputWidth !== this.state.inputWidth) {
+			this.setState({
+				inputWidth: newInputWidth
+			});
+		}
+	},
+	getInput: function getInput() {
+		return this.refs.input;
+	},
+	focus: function focus() {
+		React.findDOMNode(this.refs.input).focus();
+	},
+	select: function select() {
+		React.findDOMNode(this.refs.input).select();
+	},
+	render: function render() {
+		var escapedValue = (this.props.value || '').replace(/\&/g, '&amp;').replace(/ /g, '&nbsp;').replace(/\</g, '&lt;').replace(/\>/g, '&gt;');
+		var wrapperStyle = this.props.style || {};
+		wrapperStyle.display = 'inline-block';
+		var inputStyle = _extends({}, this.props.inputStyle);
+		inputStyle.width = this.state.inputWidth;
+		inputStyle.boxSizing = 'content-box';
+		var placeholder = this.props.placeholder ? React.createElement(
+			'div',
+			{ ref: 'placeholderSizer', style: sizerStyle },
+			this.props.placeholder
+		) : null;
+		return React.createElement(
+			'div',
+			{ className: this.props.className, style: wrapperStyle },
+			React.createElement('input', _extends({}, this.props, { ref: 'input', className: this.props.inputClassName, style: inputStyle })),
+			React.createElement('div', { ref: 'sizer', style: sizerStyle, dangerouslySetInnerHTML: { __html: escapedValue } }),
+			placeholder
+		);
+	}
+});
+
+module.exports = AutosizeInput;
+},{"react":"react"}],101:[function(require,module,exports){
 /**
  * Copyright 2013-2014, Facebook, Inc.
  * All rights reserved.
@@ -12070,7 +15680,7 @@ var ResponderEventPlugin = {
 
 module.exports = ResponderEventPlugin;
 
-},{"react/lib/EventConstants":97,"react/lib/EventPluginUtils":100,"react/lib/EventPropagators":101,"react/lib/SyntheticEvent":104,"react/lib/accumulateInto":107,"react/lib/keyOf":113}],94:[function(require,module,exports){
+},{"react/lib/EventConstants":105,"react/lib/EventPluginUtils":108,"react/lib/EventPropagators":109,"react/lib/SyntheticEvent":112,"react/lib/accumulateInto":115,"react/lib/keyOf":121}],102:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -12238,7 +15848,7 @@ var TapEventPlugin = {
 
 module.exports = TapEventPlugin;
 
-},{"./TouchEventUtils":95,"react/lib/EventConstants":97,"react/lib/EventPluginUtils":100,"react/lib/EventPropagators":101,"react/lib/SyntheticUIEvent":105,"react/lib/ViewportMetrics":106,"react/lib/keyOf":113}],95:[function(require,module,exports){
+},{"./TouchEventUtils":103,"react/lib/EventConstants":105,"react/lib/EventPluginUtils":108,"react/lib/EventPropagators":109,"react/lib/SyntheticUIEvent":113,"react/lib/ViewportMetrics":114,"react/lib/keyOf":121}],103:[function(require,module,exports){
 /**
  * Copyright 2013-2014 Facebook, Inc.
  *
@@ -12282,7 +15892,7 @@ var TouchEventUtils = {
 
 module.exports = TouchEventUtils;
 
-},{}],96:[function(require,module,exports){
+},{}],104:[function(require,module,exports){
 module.exports = function injectTapEventPlugin () {
   var React = require("react");
   React.initializeTouchEvents(true);
@@ -12293,7 +15903,7 @@ module.exports = function injectTapEventPlugin () {
   });
 };
 
-},{"./ResponderEventPlugin.js":93,"./TapEventPlugin.js":94,"react":"react","react/lib/EventPluginHub":98}],97:[function(require,module,exports){
+},{"./ResponderEventPlugin.js":101,"./TapEventPlugin.js":102,"react":"react","react/lib/EventPluginHub":106}],105:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -12365,7 +15975,7 @@ var EventConstants = {
 
 module.exports = EventConstants;
 
-},{"./keyMirror":112}],98:[function(require,module,exports){
+},{"./keyMirror":120}],106:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -12643,7 +16253,7 @@ var EventPluginHub = {
 module.exports = EventPluginHub;
 
 }).call(this,require('_process'))
-},{"./EventPluginRegistry":99,"./EventPluginUtils":100,"./accumulateInto":107,"./forEachAccumulated":109,"./invariant":111,"_process":26}],99:[function(require,module,exports){
+},{"./EventPluginRegistry":107,"./EventPluginUtils":108,"./accumulateInto":115,"./forEachAccumulated":117,"./invariant":119,"_process":28}],107:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -12923,7 +16533,7 @@ var EventPluginRegistry = {
 module.exports = EventPluginRegistry;
 
 }).call(this,require('_process'))
-},{"./invariant":111,"_process":26}],100:[function(require,module,exports){
+},{"./invariant":119,"_process":28}],108:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -13144,7 +16754,7 @@ var EventPluginUtils = {
 module.exports = EventPluginUtils;
 
 }).call(this,require('_process'))
-},{"./EventConstants":97,"./invariant":111,"_process":26}],101:[function(require,module,exports){
+},{"./EventConstants":105,"./invariant":119,"_process":28}],109:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -13286,7 +16896,7 @@ var EventPropagators = {
 module.exports = EventPropagators;
 
 }).call(this,require('_process'))
-},{"./EventConstants":97,"./EventPluginHub":98,"./accumulateInto":107,"./forEachAccumulated":109,"_process":26}],102:[function(require,module,exports){
+},{"./EventConstants":105,"./EventPluginHub":106,"./accumulateInto":115,"./forEachAccumulated":117,"_process":28}],110:[function(require,module,exports){
 /**
  * Copyright 2014-2015, Facebook, Inc.
  * All rights reserved.
@@ -13335,7 +16945,7 @@ function assign(target, sources) {
 
 module.exports = assign;
 
-},{}],103:[function(require,module,exports){
+},{}],111:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -13451,7 +17061,7 @@ var PooledClass = {
 module.exports = PooledClass;
 
 }).call(this,require('_process'))
-},{"./invariant":111,"_process":26}],104:[function(require,module,exports){
+},{"./invariant":119,"_process":28}],112:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -13617,7 +17227,7 @@ PooledClass.addPoolingTo(SyntheticEvent, PooledClass.threeArgumentPooler);
 
 module.exports = SyntheticEvent;
 
-},{"./Object.assign":102,"./PooledClass":103,"./emptyFunction":108,"./getEventTarget":110}],105:[function(require,module,exports){
+},{"./Object.assign":110,"./PooledClass":111,"./emptyFunction":116,"./getEventTarget":118}],113:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -13679,7 +17289,7 @@ SyntheticEvent.augmentClass(SyntheticUIEvent, UIEventInterface);
 
 module.exports = SyntheticUIEvent;
 
-},{"./SyntheticEvent":104,"./getEventTarget":110}],106:[function(require,module,exports){
+},{"./SyntheticEvent":112,"./getEventTarget":118}],114:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -13708,7 +17318,7 @@ var ViewportMetrics = {
 
 module.exports = ViewportMetrics;
 
-},{}],107:[function(require,module,exports){
+},{}],115:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2014-2015, Facebook, Inc.
@@ -13774,7 +17384,7 @@ function accumulateInto(current, next) {
 module.exports = accumulateInto;
 
 }).call(this,require('_process'))
-},{"./invariant":111,"_process":26}],108:[function(require,module,exports){
+},{"./invariant":119,"_process":28}],116:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -13808,7 +17418,7 @@ emptyFunction.thatReturnsArgument = function(arg) { return arg; };
 
 module.exports = emptyFunction;
 
-},{}],109:[function(require,module,exports){
+},{}],117:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -13839,7 +17449,7 @@ var forEachAccumulated = function(arr, cb, scope) {
 
 module.exports = forEachAccumulated;
 
-},{}],110:[function(require,module,exports){
+},{}],118:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -13870,7 +17480,7 @@ function getEventTarget(nativeEvent) {
 
 module.exports = getEventTarget;
 
-},{}],111:[function(require,module,exports){
+},{}],119:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -13927,7 +17537,7 @@ var invariant = function(condition, format, a, b, c, d, e, f) {
 module.exports = invariant;
 
 }).call(this,require('_process'))
-},{"_process":26}],112:[function(require,module,exports){
+},{"_process":28}],120:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -13982,7 +17592,7 @@ var keyMirror = function(obj) {
 module.exports = keyMirror;
 
 }).call(this,require('_process'))
-},{"./invariant":111,"_process":26}],113:[function(require,module,exports){
+},{"./invariant":119,"_process":28}],121:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -14018,7 +17628,7 @@ var keyOf = function(oneKeyObj) {
 
 module.exports = keyOf;
 
-},{}],114:[function(require,module,exports){
+},{}],122:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -15158,7 +18768,7 @@ request.put = function(url, data, fn){
 
 module.exports = request;
 
-},{"emitter":115,"reduce":116}],115:[function(require,module,exports){
+},{"emitter":123,"reduce":124}],123:[function(require,module,exports){
 
 /**
  * Expose `Emitter`.
@@ -15324,7 +18934,7 @@ Emitter.prototype.hasListeners = function(event){
   return !! this.listeners(event).length;
 };
 
-},{}],116:[function(require,module,exports){
+},{}],124:[function(require,module,exports){
 
 /**
  * Reduce `arr` with `fn`.
@@ -15349,4 +18959,4 @@ module.exports = function(arr, fn, initial){
   
   return curr;
 };
-},{}]},{},[24]);
+},{}]},{},[26]);
