@@ -11,13 +11,13 @@ var hex = [
     {number: 4, color: '#BF264D'},
     {number: 4, color: '#801A33'}
     ];
-var hex_radius = 40;
+var hex_radius = 48.5;
 //width: @hex-size; height: (@hex-size * 1.7);
  // margin-left: (@hex-size / 1.30);
 
 var HexGrid = React.createClass({
   getInitialState(){
-    return ({hidden: true});
+    return ({hidden: false});
   },
   unfold(){
     console.log("unfold");
@@ -25,7 +25,8 @@ var HexGrid = React.createClass({
     this.setState({hidden: folded});
   },
   render() {
-     
+     var topOffset = 55;
+      var rightOffset = 12;
        var key = 0;
       var hexArray = hex.map(function(hex, index){
           var rowClass = index%2 == 0? "even" : "odd";
@@ -34,10 +35,10 @@ var HexGrid = React.createClass({
         
 
           for(var i = 0; i < hex.number; i++){
-              if(!this.state.hidden) right = (i-index%2/2)*hex_radius*1.732;
+              if(!this.state.hidden) right = (i-index%2/2)*hex_radius*1.732+rightOffset;
              var style = {
               backgroundColor: hex.color,
-              top: index*(hex_radius*3/2),
+              top: index*(hex_radius*3/2)+topOffset,
               right: right,
               width: hex_radius, // actual width = sqrt(3)/2 * height
               height: hex_radius*1.7 // actual height is hex_radius*2
@@ -51,8 +52,12 @@ var HexGrid = React.createClass({
                   );
 
          }.bind(this));
-      console.log(hexArray);
-  	  return ( <div className="hex-container" onMouseDown={this.unfold}>
+      // var hexContainerStyle={
+      //   position: "absolute",
+      //   top: "45px",
+      //   right: "0px"
+      // }
+  	  return ( <div onMouseDown={this.unfold}>
                {hexArray}
             </div> )
    	}

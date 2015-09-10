@@ -260,7 +260,7 @@ var AddSite = _react2['default'].createClass({
 exports['default'] = AddSite;
 module.exports = exports['default'];
 
-},{"./ConfirmSubmit":6,"./FormsyDropdown":8,"./FormsyInput":9,"./MapLocator":15,"./MultipleDropdown":16,"formsy-react":92,"formsy-react-components":84,"react":"react","react-select":96,"superagent":122}],2:[function(require,module,exports){
+},{"./ConfirmSubmit":7,"./FormsyDropdown":9,"./FormsyInput":10,"./MapLocator":17,"./MultipleDropdown":18,"formsy-react":95,"formsy-react-components":87,"react":"react","react-select":99,"superagent":104}],2:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -454,7 +454,7 @@ var AdminList = _react2['default'].createClass({
 exports['default'] = AdminList;
 module.exports = exports['default'];
 
-},{"fixed-data-table":78,"react":"react","superagent":122}],4:[function(require,module,exports){
+},{"fixed-data-table":81,"react":"react","superagent":104}],4:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -504,6 +504,61 @@ exports['default'] = App;
 module.exports = exports['default'];
 
 },{"react":"react","react-router":"react-router"}],5:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var _utilAudioProcessing = require('./util/AudioProcessing');
+
+var _utilAudioProcessing2 = _interopRequireDefault(_utilAudioProcessing);
+
+var url = "https://s3-sa-east-1.amazonaws.com/observatorio-urbano/55f1bcec18cceb8f022a3eb1.mp3";
+
+var AudioContextManager = (function () {
+  function AudioContextManager() {
+    _classCallCheck(this, AudioContextManager);
+
+    window.AudioContext = window.AudioContext || window.webkitAudioContext;
+    this.context = new AudioContext();
+    this.sounds = {};
+  }
+
+  _createClass(AudioContextManager, [{
+    key: "addSound",
+    value: function addSound(id, url) {
+      var sound = new _utilAudioProcessing2["default"](url, this.context, (function (err) {
+        this.sounds[id] = sound;
+      }).bind(this));
+    }
+  }, {
+    key: "getVolume",
+    value: function getVolume(id) {
+      return this.sounds[id].getVolume();
+    }
+
+    // processSound(){
+    //   var vol = this.sound.getVolume();
+    //   console.log(vol);
+    //   requestAnimationFrame(this.processSound);
+    // }
+
+  }]);
+
+  return AudioContextManager;
+})();
+
+exports["default"] = AudioContextManager;
+module.exports = exports["default"];
+
+},{"./util/AudioProcessing":28}],6:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -522,13 +577,25 @@ var _superagent = require('superagent');
 
 var _superagent2 = _interopRequireDefault(_superagent);
 
-var _dataLightV8Json = require('./data/light-v8.json');
+var _dataLightV8EditJson = require('./data/light-v8-edit.json');
 
-var _dataLightV8Json2 = _interopRequireDefault(_dataLightV8Json);
+var _dataLightV8EditJson2 = _interopRequireDefault(_dataLightV8EditJson);
 
-var _InfoWindow = require('./InfoWindow');
+var _HexGrid = require('./HexGrid');
 
-var _InfoWindow2 = _interopRequireDefault(_InfoWindow);
+var _HexGrid2 = _interopRequireDefault(_HexGrid);
+
+var _InfoDetail = require('./InfoDetail');
+
+var _InfoDetail2 = _interopRequireDefault(_InfoDetail);
+
+var _SvgHex = require('./SvgHex');
+
+var _SvgHex2 = _interopRequireDefault(_SvgHex);
+
+var _AudioContextManager = require('./AudioContextManager');
+
+var _AudioContextManager2 = _interopRequireDefault(_AudioContextManager);
 
 var BaseMap = _react2['default'].createClass({
 	displayName: 'BaseMap',
@@ -543,11 +610,18 @@ var BaseMap = _react2['default'].createClass({
 			dataLoadedToMap: false };
 	},
 	initSitios: function initSitios(sitios) {
-		var sit = sitios.map(function (obj, index) {
+		var sit = sitios.map((function (obj, index) {
 			obj.properties.tempId = index;
+			if (obj.properties.sonidoUrl) {
+				console.log(" has sound " + obj.properties.sonidoUrl);
+				this.audioContext.addSound(index, obj.properties.sonidoUrl);
+				obj.properties.hasSound = true;
+			} else {
+				obj.properties.hasSound = false;
+			}
 			return obj;
-		});
-		this.setState({ sitios: sit }, this.addGeoJSON);
+		}).bind(this));
+		this.setState({ sitios: sit });
 	},
 	updatePixelCoords: function updatePixelCoords() {
 		if (this.state.sitios != null && this.state.mapLoaded) {
@@ -565,6 +639,10 @@ var BaseMap = _react2['default'].createClass({
 		for (var i = 0; i < this.state.sitios.length; i++) {
 			var obj = this.state.sitios[i];
 			var size = 10;
+			if (this.state.sitios[i].properties.hasSound) {
+				size = 3 + this.audioContext.getVolume(i) * 0.8;
+			}
+
 			if (this.state.selected != null && obj.properties.tempId == this.state.selected.tempId) {
 				size = 20;
 			}
@@ -574,6 +652,7 @@ var BaseMap = _react2['default'].createClass({
 			//this.ctx.fillRect(i*10, i*10,8, 8);
 			//this.ctx.fillRect(100,100, 8, 8);
 		}
+		requestAnimationFrame(this.renderCanvas);
 	},
 	addGeoJSON: function addGeoJSON() {
 		//only load data if map has been initialized, data has been received, and data has no already been loaded
@@ -589,7 +668,7 @@ var BaseMap = _react2['default'].createClass({
 					"features": this.state.sitios
 				}
 			});
-
+			//{respuesta}
 			this.map.addLayer({
 				"id": "markers",
 				"type": "symbol",
@@ -597,20 +676,20 @@ var BaseMap = _react2['default'].createClass({
 				"interactive": true,
 				"layout": {
 					"icon-image": "default_marker",
-					// "text-field": "{respuesta}",
-					// "text-font": "Open Sans Semibold, Arial Unicode MS Bold",
+					"text-field": "{respuesta}",
+					"text-font": ["Open Sans Semibold, Arial Unicode MS Bold"],
 
-					// "text-offset": [0, 0.6],
+					"text-offset": [1.0, 0.0],
 					"text-anchor": "left",
-					"text-justy": true,
+					"text-justify": "left",
+					"text-max-width": 40,
+					"text-transform": "uppercase",
 					"text-optional": true
 				},
 				"paint": {
-					"icon-opacity": 0.05
-					// "text-size": 18,
-					//  "text-halo-color": "#000",
-					//  "text-halo-width": 4,
-					//   "text-color": "#fff"
+					//	"icon-opacity": 0.05
+					"text-size": 18,
+					"text-color": "#f36"
 				}
 			});
 
@@ -622,10 +701,11 @@ var BaseMap = _react2['default'].createClass({
 					if (features.length > 0) {
 						//for(var i )
 						console.log(e.point);
-						this.setState({ selected: features[0].properties }, this.renderCanvas);
+						console.log(e.lngLat);
+						this.setState({ selected: features[0].properties, coords: { lat: e.lngLat.lat, lng: e.lngLat.lng } }, this.renderCanvas);
 						this.map.flyTo({ center: e.lngLat, zoom: 16, pitch: 100 });
 					} else {
-						this.setState({ selected: null }, this.renderCanvas);
+						this.setState({ selected: null, coords: { lat: e.lngLat.lat, lng: e.lngLat.lng } }, this.renderCanvas);
 						this.map.flyTo({ center: e.lngLat, zoom: 15, pitch: 40 });
 					}
 				}).bind(this));
@@ -635,6 +715,7 @@ var BaseMap = _react2['default'].createClass({
 	componentDidMount: function componentDidMount() {
 		console.log("calling component mount");
 		console.log(this.props);
+		this.audioContext = new _AudioContextManager2['default']();
 		_superagent2['default'].get('/api/sitios').query({ limit: 50 }).end((function (err, res) {
 			console.log(res.body);
 			this.initSitios(res.body);
@@ -643,7 +724,7 @@ var BaseMap = _react2['default'].createClass({
 		mapboxgl.accessToken = 'pk.eyJ1Ijoib2oiLCJhIjoiSEw0cDJaNCJ9.9ffK1AU2O26zvS5Zsa6eqw';
 		this.map = new mapboxgl.Map({
 			container: 'map-fullscreen', // container id
-			style: _dataLightV8Json2['default'], //stylesheet location
+			style: _dataLightV8EditJson2['default'], //stylesheet location
 			// style: lightMapStyle,
 			center: [this.state.coords.lng, this.state.coords.lat], // starting position
 			zoom: 5, // starting zoom
@@ -652,9 +733,9 @@ var BaseMap = _react2['default'].createClass({
 
 		//this.map.rotateTo(100);
 		// Add zoom and rotation controls to the map.
-		this.map.addControl(new mapboxgl.Navigation({ position: 'top-left' }));
+
 		this.map.on('style.load', (function () {
-			this.setState({ mapLoaded: true }, this.addGeoJSON);
+
 			//this.map.on('moveend', this.addGeoJSON);
 			setTimeout((function () {
 				this.map.flyTo({
@@ -673,6 +754,11 @@ var BaseMap = _react2['default'].createClass({
 					// console.log(this.map.getBounds());
 				}).bind(this));
 			}).bind(this), 400);
+			setTimeout((function () {
+				this.setState({ mapLoaded: true }, this.addGeoJSON);
+				this.props.onMapLoaded();
+				this.map.addControl(new mapboxgl.Navigation({ position: 'top-left' }));
+			}).bind(this), 3000);
 			/*if(this.props.localidadData!=null){
    	this.loadMapData(this.props.localidadData);
    }*/
@@ -696,13 +782,16 @@ var BaseMap = _react2['default'].createClass({
 			console.log("bounds changed");
 			console.log(nextProps.bounds);
 			this.map.fitBounds(nextProps.bounds, { bearing: 100 });
+			this.setState({ selected: null });
 		}
 	},
 	render: function render() {
 		//console.l	<label>{this.props.label}</label>og("rerendering maplocator");
-		var info = {};
+		var info = [];
 		if (this.state.selected != null) {
-			info = _react2['default'].createElement(_InfoWindow2['default'], { info: this.state.selected });
+			info.push(_react2['default'].createElement(_HexGrid2['default'], null));
+			info.push(_react2['default'].createElement(_InfoDetail2['default'], { info: this.state.selected, coords: this.state.coords }));
+			//info.push(<SvgHex coords={this.state.coords}/>);
 		}
 		return _react2['default'].createElement(
 			'div',
@@ -717,7 +806,7 @@ var BaseMap = _react2['default'].createClass({
 exports['default'] = BaseMap;
 module.exports = exports['default'];
 
-},{"./InfoWindow":12,"./data/light-v8.json":25,"react":"react","superagent":122}],6:[function(require,module,exports){
+},{"./AudioContextManager":5,"./HexGrid":12,"./InfoDetail":13,"./SvgHex":23,"./data/light-v8-edit.json":26,"react":"react","superagent":104}],7:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -996,7 +1085,7 @@ exports['default'] = ConfirmSubmit;
 // });
 module.exports = exports['default'];
 
-},{"react":"react","superagent":122}],7:[function(require,module,exports){
+},{"react":"react","superagent":104}],8:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -1047,7 +1136,7 @@ var Dropdown = _react2["default"].createClass({
 exports["default"] = Dropdown;
 module.exports = exports["default"];
 
-},{"react":"react"}],8:[function(require,module,exports){
+},{"react":"react"}],9:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -1125,7 +1214,7 @@ var FormsyDropdown = _react2['default'].createClass({
 exports['default'] = FormsyDropdown;
 module.exports = exports['default'];
 
-},{"formsy-react":92,"react":"react"}],9:[function(require,module,exports){
+},{"formsy-react":95,"react":"react"}],10:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -1188,7 +1277,7 @@ var FormsyInput = _react2['default'].createClass({
 exports['default'] = FormsyInput;
 module.exports = exports['default'];
 
-},{"formsy-react":92,"react":"react"}],10:[function(require,module,exports){
+},{"formsy-react":95,"react":"react"}],11:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -1268,7 +1357,7 @@ var Geocode = _react2['default'].createClass({
 exports['default'] = Geocode;
 module.exports = exports['default'];
 
-},{"react":"react","superagent":122}],11:[function(require,module,exports){
+},{"react":"react","superagent":104}],12:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -1282,7 +1371,7 @@ var _react = require('react');
 var _react2 = _interopRequireDefault(_react);
 
 var hex = [{ number: 2, color: '#C1AFD1' }, { number: 4, color: '#D6C9E0' }, { number: 5, color: '#EAE4F0' }, { number: 7, color: '#FFD6E0' }, { number: 8, color: '#FFADC2' }, { number: 9, color: '#FF85A3' }, { number: 7, color: '#FF5C85' }, { number: 6, color: '#FF3366' }, { number: 4, color: '#BF264D' }, { number: 4, color: '#801A33' }];
-var hex_radius = 40;
+var hex_radius = 48.5;
 //width: @hex-size; height: (@hex-size * 1.7);
 // margin-left: (@hex-size / 1.30);
 
@@ -1290,7 +1379,7 @@ var HexGrid = _react2['default'].createClass({
   displayName: 'HexGrid',
 
   getInitialState: function getInitialState() {
-    return { hidden: true };
+    return { hidden: false };
   },
   unfold: function unfold() {
     console.log("unfold");
@@ -1298,7 +1387,8 @@ var HexGrid = _react2['default'].createClass({
     this.setState({ hidden: folded });
   },
   render: function render() {
-
+    var topOffset = 55;
+    var rightOffset = 12;
     var key = 0;
     var hexArray = hex.map((function (hex, index) {
       var rowClass = index % 2 == 0 ? "even" : "odd";
@@ -1306,10 +1396,10 @@ var HexGrid = _react2['default'].createClass({
       var right = -index % 2 / 2 * hex_radius * 1.732;
 
       for (var i = 0; i < hex.number; i++) {
-        if (!this.state.hidden) right = (i - index % 2 / 2) * hex_radius * 1.732;
+        if (!this.state.hidden) right = (i - index % 2 / 2) * hex_radius * 1.732 + rightOffset;
         var style = {
           backgroundColor: hex.color,
-          top: index * (hex_radius * 3 / 2),
+          top: index * (hex_radius * 3 / 2) + topOffset,
           right: right,
           width: hex_radius, // actual width = sqrt(3)/2 * height
           height: hex_radius * 1.7 // actual height is hex_radius*2
@@ -1320,10 +1410,14 @@ var HexGrid = _react2['default'].createClass({
 
       return { hexes: hexes };
     }).bind(this));
-    console.log(hexArray);
+    // var hexContainerStyle={
+    //   position: "absolute",
+    //   top: "45px",
+    //   right: "0px"
+    // }
     return _react2['default'].createElement(
       'div',
-      { className: 'hex-container', onMouseDown: this.unfold },
+      { onMouseDown: this.unfold },
       hexArray
     );
   }
@@ -1333,21 +1427,115 @@ var HexGrid = _react2['default'].createClass({
 exports['default'] = HexGrid;
 module.exports = exports['default'];
 
-},{"react":"react"}],12:[function(require,module,exports){
-"use strict";
+},{"react":"react"}],13:[function(require,module,exports){
+'use strict';
 
-Object.defineProperty(exports, "__esModule", {
+Object.defineProperty(exports, '__esModule', {
   value: true
 });
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
 var _react = require('react');
 
 var _react2 = _interopRequireDefault(_react);
 
-var InfoWindow = _react2["default"].createClass({
-  displayName: "InfoWindow",
+var _InfoWindow = require('./InfoWindow');
+
+var _InfoWindow2 = _interopRequireDefault(_InfoWindow);
+
+var _HexGrid = require('./HexGrid');
+
+var _HexGrid2 = _interopRequireDefault(_HexGrid);
+
+var InfoDetail = _react2['default'].createClass({
+  displayName: 'InfoDetail',
+
+  render: function render() {
+    var size = "250px";
+    var container_style = {
+      position: "fixed",
+      top: 0,
+      right: 0,
+      color: "#333",
+      width: "100%",
+      height: "100%",
+      pointerEvents: 'none',
+      backgroundColor: "rgba(255, 255, 255, 0.8)"
+    };
+    var streetview_style = {
+      position: "absolute",
+      top: "118px",
+      right: "82px",
+      width: size,
+      height: size
+    };
+    var img_style = {
+      position: "absolute",
+      top: "480px",
+      right: "207px",
+      width: size,
+      height: size
+    };
+    var porque_style = {
+      position: "absolute",
+      top: "263px",
+      right: "251px",
+      width: size,
+      textAlign: "center",
+      backgroundColor: "ff3366",
+      color: "#fff",
+      height: size
+    };
+    var text_style = {
+      margin: "60px 40px"
+    };
+    console.log(this.props);
+    var streetViewSrc = "https://maps.googleapis.com/maps/api/streetview?size=250x250&location=" + this.props.coords.lat + "," + this.props.coords.lng + "&heading=151.78&pitch=-0.76&AIzaSyCkTdSqnWG-3LoDikXJRmM4UFB1CaraARc";
+
+    return _react2['default'].createElement(
+      'div',
+      { style: container_style },
+      _react2['default'].createElement('img', { className: 'hexClip', style: streetview_style, src: streetViewSrc }),
+      _react2['default'].createElement(
+        'div',
+        { style: porque_style, className: 'hexClip' },
+        _react2['default'].createElement(
+          'div',
+          { style: text_style },
+          this.props.info.porque
+        )
+      ),
+      _react2['default'].createElement('img', { className: 'hexClip', style: img_style, src: this.props.info.fotoUrl }),
+      _react2['default'].createElement(_InfoWindow2['default'], { info: this.props.info }),
+      ');'
+    );
+  }
+
+});
+
+exports['default'] = InfoDetail;
+module.exports = exports['default'];
+
+},{"./HexGrid":12,"./InfoWindow":14,"react":"react"}],14:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, '__esModule', {
+  value: true
+});
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+var _react = require('react');
+
+var _react2 = _interopRequireDefault(_react);
+
+var _SvgHex = require('./SvgHex');
+
+var _SvgHex2 = _interopRequireDefault(_SvgHex);
+
+var InfoWindow = _react2['default'].createClass({
+  displayName: 'InfoWindow',
 
   render: function render() {
     var container_style = {
@@ -1373,59 +1561,61 @@ var InfoWindow = _react2["default"].createClass({
       color: "ff3366"
     };
     var element = [];
-    console.log(this.props.info);
-    return _react2["default"].createElement(
-      "div",
+    console.log(this.props);
+    return _react2['default'].createElement(
+      'div',
       { style: container_style },
-      _react2["default"].createElement(
-        "h3",
+      _react2['default'].createElement(
+        'h3',
         { style: header_style },
-        " EDIFICIO "
+        ' ',
+        this.props.info.categoria,
+        ' '
       ),
-      _react2["default"].createElement(
-        "h5",
+      _react2['default'].createElement(
+        'h5',
         { style: respuesta_style },
-        " ",
+        ' ',
         this.props.info.respuesta,
-        " "
+        ' '
       ),
-      _react2["default"].createElement(
-        "h5",
+      _react2['default'].createElement(
+        'h5',
         { style: element_style },
-        " LOCALIDAD / ",
+        ' LOCALIDAD / ',
         this.props.info.localidad,
-        " "
+        ' '
       ),
-      _react2["default"].createElement(
-        "h5",
+      _react2['default'].createElement(
+        'h5',
         { style: element_style },
-        " BARRIO / ",
+        ' BARRIO / ',
         this.props.info.barrio,
-        " "
+        ' '
       ),
-      _react2["default"].createElement(
-        "h5",
+      _react2['default'].createElement(
+        'h5',
         { style: element_style },
-        " DIRECCIÓN / ",
+        ' DIRECCIÓN / ',
         this.props.info.direccion,
-        " "
+        ' '
       ),
-      _react2["default"].createElement(
-        "h5",
+      _react2['default'].createElement(
+        'h5',
         { style: element_style },
-        " TEMPORALIDAD / ",
+        ' TEMPORALIDAD / ',
         this.props.info.temporalidad,
-        " "
+        ' '
       )
     );
   }
 
 });
 
-exports["default"] = InfoWindow;
-module.exports = exports["default"];
+exports['default'] = InfoWindow;
+module.exports = exports['default'];
 
-},{"react":"react"}],13:[function(require,module,exports){
+},{"./SvgHex":23,"react":"react"}],15:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -1478,11 +1668,11 @@ var Intro = _react2["default"].createClass({
 exports["default"] = Intro;
 module.exports = exports["default"];
 
-},{"react":"react"}],14:[function(require,module,exports){
+},{"react":"react"}],16:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
-	value: true
+  value: true
 });
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
@@ -1512,36 +1702,43 @@ var _Navigation2 = _interopRequireDefault(_Navigation);
 // lng: -74.16126694164626
 
 var Main = _react2['default'].createClass({
-	displayName: 'Main',
+  displayName: 'Main',
 
-	getInitialState: function getInitialState() {
-		var sw = new mapboxgl.LngLat(-74.16126694164626, 4.5155410235603455);
-		var ne = new mapboxgl.LngLat(-73.91643370363467, 4.838602784913988);
-		var bounds = new mapboxgl.LngLatBounds(sw, ne);
-		return { bounds: bounds };
-	},
-	setBounds: function setBounds(bbox) {
-		var ne = new mapboxgl.LngLat(bbox[0], bbox[1]);
-		var sw = new mapboxgl.LngLat(bbox[2], bbox[3]);
-		var bounds = new mapboxgl.LngLatBounds(sw, ne);
-		this.setState({ bounds: bounds });
-	},
-	render: function render() {
-		return _react2['default'].createElement(
-			'div',
-			null,
-			_react2['default'].createElement(_BaseMap2['default'], { bounds: this.state.bounds }),
-			_react2['default'].createElement(_HexGrid2['default'], null),
-			_react2['default'].createElement(_Navigation2['default'], { setBounds: this.setBounds })
-		);
-	}
+  getInitialState: function getInitialState() {
+    var sw = new mapboxgl.LngLat(-74.16126694164626, 4.5155410235603455);
+    var ne = new mapboxgl.LngLat(-73.91643370363467, 4.838602784913988);
+    var bounds = new mapboxgl.LngLatBounds(sw, ne);
+    return { bounds: bounds, mapLoaded: false };
+  },
+  showElements: function showElements() {
+    this.setState({ mapLoaded: true });
+  },
+  setBounds: function setBounds(bbox) {
+    var ne = new mapboxgl.LngLat(bbox[0], bbox[1]);
+    var sw = new mapboxgl.LngLat(bbox[2], bbox[3]);
+    var bounds = new mapboxgl.LngLatBounds(sw, ne);
+    this.setState({ bounds: bounds });
+  },
+  render: function render() {
+    var mapElements = [];
+    if (this.state.mapLoaded) {
+      //mapElements.push(<HexGrid/>);
+      mapElements.push(_react2['default'].createElement(_Navigation2['default'], { setBounds: this.setBounds }));
+    }
+    return _react2['default'].createElement(
+      'div',
+      null,
+      _react2['default'].createElement(_BaseMap2['default'], { bounds: this.state.bounds, onMapLoaded: this.showElements }),
+      mapElements
+    );
+  }
 
 });
 
 exports['default'] = Main;
 module.exports = exports['default'];
 
-},{"./BaseMap":5,"./HexGrid":11,"./Navigation":17,"react":"react"}],15:[function(require,module,exports){
+},{"./BaseMap":6,"./HexGrid":12,"./Navigation":19,"react":"react"}],17:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -1643,7 +1840,7 @@ var MapLocator = _react2['default'].createClass({
 exports['default'] = MapLocator;
 module.exports = exports['default'];
 
-},{"./Geocode":10,"./data/light-v8.json":25,"formsy-react":92,"react":"react"}],16:[function(require,module,exports){
+},{"./Geocode":11,"./data/light-v8.json":27,"formsy-react":95,"react":"react"}],18:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -1747,7 +1944,7 @@ var MultipleDropdown = _react2['default'].createClass({
 exports['default'] = MultipleDropdown;
 module.exports = exports['default'];
 
-},{"./Dropdown":7,"./data/categorias.json":24,"formsy-react":92,"react":"react"}],17:[function(require,module,exports){
+},{"./Dropdown":8,"./data/categorias.json":25,"formsy-react":95,"react":"react"}],19:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -1847,163 +2044,7 @@ var Navigation = _react2['default'].createClass({
 exports['default'] = Navigation;
 module.exports = exports['default'];
 
-},{"./SearchDropdown":21,"react":"react","react-select":96,"superagent":122}],18:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, '__esModule', {
-  value: true
-});
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-var _react = require('react');
-
-var _react2 = _interopRequireDefault(_react);
-
-var _Words = require('./Words');
-
-var _Words2 = _interopRequireDefault(_Words);
-
-var _Pregunta = require('./Pregunta');
-
-var _Pregunta2 = _interopRequireDefault(_Pregunta);
-
-//TODO: send this from server
-var fieldValues = {
-  respuesta: null,
-  ubicacion: { localidad: null, barrio: null, direccion: null },
-  temporalidad: null,
-  porque: null,
-  categoria: null,
-  existente: true
-};
-
-var PatrimonioForm = _react2['default'].createClass({
-  displayName: 'PatrimonioForm',
-
-  getInitialState: function getInitialState() {
-    return {
-      step: 0
-    };
-  },
-  nextStep: function nextStep() {
-    this.setState({
-      step: this.state.step + 1
-    });
-  },
-
-  previousStep: function previousStep() {
-    this.setState({
-      step: this.state.step - 1
-    });
-  },
-
-  saveValues: function saveValues(field_value) {
-    return (function () {
-      fieldValues = Object.assign({}, fieldValues, field_value);
-    }).bind(this)();
-  },
-  render: function render() {
-    switch (this.state.step) {
-      case 0:
-        return _react2['default'].createElement(_Words2['default'], { nextStep: this.nextStep });
-      case 1:
-        return _react2['default'].createElement(_Pregunta2['default'], { fieldValues: fieldValues,
-          saveValues: this.saveValues,
-          nextStep: this.nextStep });
-    }
-  }
-});
-
-exports['default'] = PatrimonioForm;
-module.exports = exports['default'];
-
-},{"./Pregunta":19,"./Words":23,"react":"react"}],19:[function(require,module,exports){
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
-
-var _react = require('react');
-
-var _react2 = _interopRequireDefault(_react);
-
-var preguntas = ["¿Qué conservaría usted de su barrio?", "¿Qué mostraría usted de su barrio?", "¿Qué vale la pena conocer de su barrio?", "¿Para usted, qué es imprescindible de su barrio?"];
-
-var Pregunta = _react2["default"].createClass({
-  displayName: "Pregunta",
-
-  render: function render() {
-    var rand = Math.floor(Math.random() * preguntas.length);
-    return _react2["default"].createElement(
-      "div",
-      null,
-      _react2["default"].createElement(
-        "h1",
-        null,
-        preguntas[rand]
-      ),
-      _react2["default"].createElement(
-        "label",
-        null,
-        "Respuesta"
-      ),
-      _react2["default"].createElement("input", { className: "u-full-width", type: "text", ref: "respuesta", defaultValue: this.props.fieldValues.respuesta }),
-      _react2["default"].createElement(
-        "label",
-        { "for": "Porque" },
-        "¿Por qué?"
-      ),
-      _react2["default"].createElement("textarea", { className: "u-full-width", placeholder: "Por que...", id: "Descripcion" }),
-      _react2["default"].createElement(
-        "label",
-        null,
-        "Temporalidad"
-      ),
-      _react2["default"].createElement(
-        "label",
-        { className: "temporalidad" },
-        _react2["default"].createElement("input", { type: "checkbox" }),
-        _react2["default"].createElement(
-          "span",
-          { className: "label-body" },
-          "Existe"
-        ),
-        _react2["default"].createElement("input", { type: "checkbox" }),
-        _react2["default"].createElement(
-          "span",
-          { className: "label-body" },
-          "Ya no existe"
-        )
-      ),
-      _react2["default"].createElement(
-        "button",
-        { className: "button-primary", onClick: this.saveAndContinue },
-        "Guardar y Continuar"
-      )
-    );
-  },
-
-  saveAndContinue: function saveAndContinue(e) {
-    e.preventDefault();
-
-    // Get values via this.refs
-    var data = {
-      respuesta: this.refs.respuesta.getDOMNode().value
-    };
-
-    this.props.saveValues(data);
-    this.props.nextStep();
-  }
-});
-
-exports["default"] = Pregunta;
-module.exports = exports["default"];
-
-},{"react":"react"}],20:[function(require,module,exports){
+},{"./SearchDropdown":21,"react":"react","react-select":99,"superagent":104}],20:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -2031,7 +2072,7 @@ var Projeccion = _react2['default'].createClass({
 exports['default'] = Projeccion;
 module.exports = exports['default'];
 
-},{"./BaseMap":5,"react":"react"}],21:[function(require,module,exports){
+},{"./BaseMap":6,"react":"react"}],21:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -2115,6 +2156,109 @@ var _react = require('react');
 
 var _react2 = _interopRequireDefault(_react);
 
+var _utilAudioProcessing = require('./util/AudioProcessing');
+
+var _utilAudioProcessing2 = _interopRequireDefault(_utilAudioProcessing);
+
+var url = "https://s3-sa-east-1.amazonaws.com/observatorio-urbano/55f1bcec18cceb8f022a3eb1.mp3";
+var SoundIcon = _react2['default'].createClass({
+  displayName: 'SoundIcon',
+
+  componentDidMount: function componentDidMount() {
+    window.AudioContext = window.AudioContext || window.webkitAudioContext;
+    var context = new AudioContext();
+    this.sound = new _utilAudioProcessing2['default'](url, context, (function (err) {
+      this.processSound();
+    }).bind(this));
+  },
+  processSound: function processSound() {
+    var vol = this.sound.getVolume();
+    console.log(vol);
+    requestAnimationFrame(this.processSound);
+  },
+  render: function render() {
+
+    return _react2['default'].createElement(
+      'div',
+      null,
+      'SoundTest'
+    );
+  }
+
+});
+
+exports['default'] = SoundIcon;
+module.exports = exports['default'];
+
+},{"./util/AudioProcessing":28,"react":"react"}],23:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; desc = parent = getter = undefined; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; continue _function; } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var _react = require('react');
+
+var _react2 = _interopRequireDefault(_react);
+
+var SvgHex = (function (_React$Component) {
+  _inherits(SvgHex, _React$Component);
+
+  function SvgHex() {
+    _classCallCheck(this, SvgHex);
+
+    _get(Object.getPrototypeOf(SvgHex.prototype), "constructor", this).apply(this, arguments);
+  }
+
+  _createClass(SvgHex, [{
+    key: "render",
+    value: function render() {
+      console.log(this.props);
+      var imgSrc = "https://maps.googleapis.com/maps/api/streetview?size=250x250&location=" + this.props.coords.lat + "," + this.props.coords.lng + "&heading=151.78&pitch=-0.76&AIzaSyCkTdSqnWG-3LoDikXJRmM4UFB1CaraARc";
+      console.log(imgSrc);
+      var i = _react2["default"].createElement("img", { src: imgSrc });
+      // var containerStyle = {
+      // 	position: "fixed",
+      // 	top: "20px",
+      // 	right: "20px"
+      // }
+      return _react2["default"].createElement(
+        "div",
+        null,
+        i
+      );
+    }
+  }]);
+
+  return SvgHex;
+})(_react2["default"].Component);
+
+exports["default"] = SvgHex;
+module.exports = exports["default"];
+
+},{"react":"react"}],24:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, '__esModule', {
+  value: true
+});
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+var _react = require('react');
+
+var _react2 = _interopRequireDefault(_react);
+
 var _Intro = require('./Intro');
 
 var _Intro2 = _interopRequireDefault(_Intro);
@@ -2157,61 +2301,7 @@ var Web = _react2['default'].createClass({
 exports['default'] = Web;
 module.exports = exports['default'];
 
-},{"./Intro":13,"./Main":14,"react":"react"}],23:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, '__esModule', {
-  value: true
-});
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-var _react = require('react');
-
-var _react2 = _interopRequireDefault(_react);
-
-var _reactTapEventPlugin = require("react-tap-event-plugin");
-
-var _reactTapEventPlugin2 = _interopRequireDefault(_reactTapEventPlugin);
-
-(0, _reactTapEventPlugin2['default'])();
-var list = [['metropolitano', 12], ['viviendas', 2], ['espacios', 6], ['urbanos', 6], ['humedales', 6], ['arte', 10], ['barrio', 6], ['ambulante', 4], ['iglesias', 6], ['verdes', 30], ['orientales', 30], ['comercial', 30], ['reservas', 30], ['pasaje', 30], ['obras', 30], ['almacén', 30], ['infantil', 30], ['quebradas', 30], ['alaedas', 30], ['bolsillo', 30], ['parques', 30], ['fábrica', 30], ['edificios', 30], ['conjunto', 30], ['imprenta', 30], ['academia', 30], ['canales', 30], ['arborizado', 30], ['formal', 30], ['almacen', 30], ['rios', 30], ['centro', 30], ['público', 30], ['zonal', 30], ['educación', 30], ['almacen', 30], ['barrio', 30], ['colegio', 30], ['taller', 30], ['vecinal', 30], ['ambulante', 30], ['conjuntos', 30], ['cerros', 30], ['jardín', 30], ['y/o', 30], ['corredores', 30], ['instituto', 30], ['forestales', 30], ['personajes', 30], ['viales', 30], ['públicos', 30], ['zonas', 30]];
-
-var Words = _react2['default'].createClass({
-  displayName: 'Words',
-
-  getInitialState: function getInitialState() {
-    return {
-      width: 100,
-      height: 100
-    };
-  },
-  componentDidMount: function componentDidMount() {
-    this.setState({
-      width: window.innerWidth,
-      height: window.innerHeight
-    }, function () {
-      for (var i = 0; i < list.length; i++) {
-        list[i][1] = Math.floor(Math.random() * 30) + 8;
-      }
-      console.log(this.refs.canvas.getDOMNode());
-      WordCloud(document.getElementById('canvas'), { list: list, fontFamily: 'monospace', color: 'white', weightFactor: 2, backgroundColor: 'black', wait: 200, gridSize: 10, rotateRatio: 0.25 });
-    });
-  },
-  render: function render() {
-
-    return _react2['default'].createElement(
-      'div',
-      null,
-      _react2['default'].createElement('canvas', { id: 'canvas', ref: 'canvas', width: this.state.width, height: this.state.height, onTouchTap: this.props.nextStep, onMouseDown: this.props.nextStep })
-    );
-  }
-});
-
-exports['default'] = Words;
-module.exports = exports['default'];
-
-},{"react":"react","react-tap-event-plugin":104}],24:[function(require,module,exports){
+},{"./Intro":15,"./Main":16,"react":"react"}],25:[function(require,module,exports){
 module.exports=[
 	{
 		"name": "monumental",
@@ -2311,7 +2401,3756 @@ module.exports=[
 		]
 	}
 ]
-},{}],25:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
+module.exports={
+  "version": 8,
+  "name": "Light",
+  "sources": {
+    "mapbox": {
+      "url": "mapbox://mapbox.mapbox-streets-v6",
+      "type": "vector"
+    },
+    "mapbox://mapbox.mapbox-terrain-v2": {
+      "url": "mapbox://mapbox.mapbox-terrain-v2",
+      "type": "vector"
+    }
+  },
+  "sprite": "mapbox://sprites/mapbox/light-v8",
+  "glyphs": "mapbox://fonts/mapbox/{fontstack}/{range}.pbf",
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "layout": {
+        "visibility": "visible"
+      },
+      "paint": {
+        "background-color": "#eee"
+      }
+    },
+    {
+      "id": "landcover_snow",
+      "type": "fill",
+      "source": "mapbox://mapbox.mapbox-terrain-v2",
+      "source-layer": "landcover",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "class",
+          "snow"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible"
+      },
+      "paint": {
+        "fill-color": "#fff",
+        "fill-opacity": 0.5
+      }
+    },
+    {
+      "id": "landcover_crop",
+      "type": "fill",
+      "source": "mapbox://mapbox.mapbox-terrain-v2",
+      "source-layer": "landcover",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "class",
+          "crop"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible"
+      },
+      "paint": {
+        "fill-color": "#ececec",
+        "fill-opacity": 0.5
+      }
+    },
+    {
+      "id": "landcover_grass",
+      "type": "fill",
+      "source": "mapbox://mapbox.mapbox-terrain-v2",
+      "source-layer": "landcover",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "class",
+          "grass"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible"
+      },
+      "paint": {
+        "fill-color": "#e5e5e5",
+        "fill-opacity": 0.5
+      }
+    },
+    {
+      "id": "landcover_scrub",
+      "type": "fill",
+      "source": "mapbox://mapbox.mapbox-terrain-v2",
+      "source-layer": "landcover",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "class",
+          "scrub"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible"
+      },
+      "paint": {
+        "fill-color": "#e3e3e3",
+        "fill-opacity": 0.5
+      }
+    },
+    {
+      "id": "landcover_wood",
+      "type": "fill",
+      "source": "mapbox://mapbox.mapbox-terrain-v2",
+      "source-layer": "landcover",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "class",
+          "wood"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible"
+      },
+      "paint": {
+        "fill-color": "#dcdcdc",
+        "fill-opacity": 0.5
+      }
+    },
+    {
+      "id": "landuse_industrial",
+      "type": "fill",
+      "source": "mapbox",
+      "source-layer": "landuse",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "class",
+          "industrial"
+        ],
+        [
+          "==",
+          "$type",
+          "Polygon"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible"
+      },
+      "paint": {
+        "fill-color": "#fff",
+        "fill-opacity": 0.5
+      }
+    },
+    {
+      "id": "landuse_park",
+      "type": "fill",
+      "source": "mapbox",
+      "source-layer": "landuse",
+      "filter": [
+        "all",
+        [
+          "==",
+          "class",
+          "park"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible"
+      },
+      "paint": {
+        "fill-color": "#e4e4e4"
+      }
+    },
+    {
+      "id": "landuse_wood",
+      "type": "fill",
+      "source": "mapbox",
+      "source-layer": "landuse",
+      "filter": [
+        "all",
+        [
+          "==",
+          "class",
+          "wood"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible"
+      },
+      "paint": {
+        "fill-color": "#e0e0e0"
+      }
+    },
+    {
+      "id": "hillshade_highlight_bright",
+      "type": "fill",
+      "source": "mapbox://mapbox.mapbox-terrain-v2",
+      "source-layer": "hillshade",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "level",
+          94
+        ]
+      ],
+      "layout": {
+        "visibility": "visible"
+      },
+      "paint": {
+        "fill-color": "#fff",
+        "fill-opacity": {
+          "base": 1,
+          "stops": [
+            [
+              15,
+              0.15
+            ],
+            [
+              17,
+              0.05
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "hillshade_highlight_med",
+      "type": "fill",
+      "source": "mapbox://mapbox.mapbox-terrain-v2",
+      "source-layer": "hillshade",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "level",
+          90
+        ]
+      ],
+      "layout": {
+        "visibility": "visible"
+      },
+      "paint": {
+        "fill-color": "#fff",
+        "fill-opacity": {
+          "base": 1,
+          "stops": [
+            [
+              15,
+              0.15
+            ],
+            [
+              17,
+              0.05
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "hillshade_shadow_faint",
+      "type": "fill",
+      "source": "mapbox://mapbox.mapbox-terrain-v2",
+      "source-layer": "hillshade",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "level",
+          89
+        ]
+      ],
+      "layout": {
+        "visibility": "visible"
+      },
+      "paint": {
+        "fill-color": "#666",
+        "fill-opacity": {
+          "base": 1,
+          "stops": [
+            [
+              14,
+              0.06
+            ],
+            [
+              17,
+              0.01
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "hillshade_shadow_med",
+      "type": "fill",
+      "source": "mapbox://mapbox.mapbox-terrain-v2",
+      "source-layer": "hillshade",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "level",
+          78
+        ]
+      ],
+      "layout": {
+        "visibility": "visible"
+      },
+      "paint": {
+        "fill-color": "#666",
+        "fill-opacity": {
+          "base": 1,
+          "stops": [
+            [
+              14,
+              0.06
+            ],
+            [
+              17,
+              0.01
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "hillshade_shadow_dark",
+      "type": "fill",
+      "source": "mapbox://mapbox.mapbox-terrain-v2",
+      "source-layer": "hillshade",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "level",
+          67
+        ]
+      ],
+      "layout": {
+        "visibility": "visible"
+      },
+      "paint": {
+        "fill-color": "#888888",
+        "fill-opacity": {
+          "base": 1,
+          "stops": [
+            [
+              14,
+              0.06
+            ],
+            [
+              17,
+              0.01
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "hillshade_shadow_extreme",
+      "type": "fill",
+      "source": "mapbox://mapbox.mapbox-terrain-v2",
+      "source-layer": "hillshade",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "level",
+          56
+        ]
+      ],
+      "layout": {
+        "visibility": "visible"
+      },
+      "paint": {
+        "fill-color": "#999",
+        "fill-opacity": {
+          "base": 1,
+          "stops": [
+            [
+              14,
+              0.06
+            ],
+            [
+              17,
+              0.01
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "building",
+      "type": "fill",
+      "source": "mapbox",
+      "source-layer": "building",
+      "minzoom": 15,
+      "paint": {
+        "fill-outline-color": "#c0c0c0",
+        "fill-opacity": {
+          "base": 1,
+          "stops": [
+            [
+              15,
+              0
+            ],
+            [
+              16.5,
+              1
+            ]
+          ]
+        },
+        "fill-antialias": true,
+        "fill-color": "#cbcbcb"
+      }
+    },
+    {
+      "id": "waterway",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "waterway",
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "LineString"
+        ],
+        [
+          "in",
+          "class",
+          "river",
+          "canal"
+        ]
+      ],
+      "paint": {
+        "line-color": "#d6d6d6",
+        "line-width": {
+          "base": 1,
+          "stops": [
+            [
+              6,
+              0.25
+            ],
+            [
+              20,
+              6
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "waterway_stream",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "waterway",
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "LineString"
+        ],
+        [
+          "in",
+          "class",
+          "stream"
+        ]
+      ],
+      "paint": {
+        "line-color": "#d6d6d6",
+        "line-width": {
+          "base": 1,
+          "stops": [
+            [
+              13,
+              0.75
+            ],
+            [
+              20,
+              4
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "water",
+      "type": "fill",
+      "source": "mapbox",
+      "source-layer": "water",
+      "layout": {
+        "visibility": "visible"
+      },
+      "paint": {
+        "fill-color": "#d6d6d6"
+      }
+    },
+    {
+      "id": "aeroway_runway",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "aeroway",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "LineString"
+        ],
+        [
+          "==",
+          "type",
+          "runway"
+        ]
+      ],
+      "layout": {
+        "line-join": "miter",
+        "visibility": "visible"
+      },
+      "paint": {
+        "line-width": {
+          "base": 1.15,
+          "stops": [
+            [
+              11,
+              3
+            ],
+            [
+              20,
+              32
+            ]
+          ]
+        },
+        "line-color": "#fff",
+        "line-opacity": {
+          "base": 1,
+          "stops": [
+            [
+              9,
+              0.5
+            ],
+            [
+              11,
+              1
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "aeroway_taxiway",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "aeroway",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "LineString"
+        ],
+        [
+          "==",
+          "type",
+          "taxiway"
+        ]
+      ],
+      "layout": {
+        "line-join": "miter"
+      },
+      "paint": {
+        "line-width": {
+          "base": 1.15,
+          "stops": [
+            [
+              10,
+              0.25
+            ],
+            [
+              11,
+              1
+            ],
+            [
+              20,
+              8
+            ]
+          ]
+        },
+        "line-color": "#fff"
+      }
+    },
+    {
+      "id": "tunnel_minor",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "tunnel",
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "LineString"
+        ],
+        [
+          "in",
+          "class",
+          "motorway_link",
+          "street",
+          "street_limited",
+          "service",
+          "driveway",
+          "path"
+        ]
+      ],
+      "paint": {
+        "line-color": "#efefef",
+        "line-width": {
+          "base": 1.55,
+          "stops": [
+            [
+              4,
+              0.25
+            ],
+            [
+              20,
+              20
+            ]
+          ]
+        },
+        "line-dasharray": [
+          0.36,
+          0.18
+        ]
+      }
+    },
+    {
+      "id": "tunnel_major",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "tunnel",
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "LineString"
+        ],
+        [
+          "in",
+          "class",
+          "motorway",
+          "main"
+        ]
+      ],
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1.4,
+          "stops": [
+            [
+              6,
+              0.5
+            ],
+            [
+              20,
+              30
+            ]
+          ]
+        },
+        "line-dasharray": [
+          0.28,
+          0.14
+        ]
+      }
+    },
+    {
+      "id": "road-path",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "road",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "class",
+          "path"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible"
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1,
+          "stops": [
+            [
+              15,
+              1
+            ],
+            [
+              18,
+              4
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "road-street-low-zoom",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "road",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "street",
+          "street_limited"
+        ],
+        [
+          "==",
+          "$type",
+          "LineString"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1.5,
+          "stops": [
+            [
+              12.5,
+              0.5
+            ],
+            [
+              14,
+              2
+            ],
+            [
+              18,
+              18
+            ]
+          ]
+        },
+        "line-opacity": {
+          "base": 1,
+          "stops": [
+            [
+              11.5,
+              0
+            ],
+            [
+              12,
+              1
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "road-service-driveway",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "road",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "service",
+          "driveway"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1,
+          "stops": [
+            [
+              14,
+              0.5
+            ],
+            [
+              18,
+              12
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "road-motorway_link",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "road",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "motorway_link"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1.5,
+          "stops": [
+            [
+              12.5,
+              0.5
+            ],
+            [
+              14,
+              2
+            ],
+            [
+              18,
+              18
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "road-street_limited",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "road",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "class",
+          "street_limited"
+        ],
+        [
+          "==",
+          "$type",
+          "LineString"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1.5,
+          "stops": [
+            [
+              12.5,
+              0.5
+            ],
+            [
+              14,
+              2
+            ],
+            [
+              18,
+              18
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "road-street",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "road",
+      "minzoom": 14,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "street"
+        ],
+        [
+          "==",
+          "$type",
+          "LineString"
+        ]
+      ],
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round",
+        "visibility": "visible"
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1.5,
+          "stops": [
+            [
+              12.5,
+              0.3
+            ],
+            [
+              14,
+              2
+            ],
+            [
+              18,
+              18
+            ]
+          ]
+        },
+        "line-opacity": 1
+      }
+    },
+    {
+      "id": "road-main",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "road",
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "LineString"
+        ],
+        [
+          "in",
+          "class",
+          "main"
+        ]
+      ],
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round",
+        "visibility": "visible"
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1.5,
+          "stops": [
+            [
+              6,
+              0.5
+            ],
+            [
+              18,
+              26
+            ]
+          ]
+        },
+        "line-opacity": {
+          "base": 1,
+          "stops": [
+            [
+              5,
+              0
+            ],
+            [
+              5.5,
+              1
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "road-trunk",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "road",
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "main"
+        ],
+        [
+          "==",
+          "type",
+          "trunk"
+        ]
+      ],
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round",
+        "visibility": "visible"
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1.5,
+          "stops": [
+            [
+              5,
+              0.75
+            ],
+            [
+              18,
+              32
+            ]
+          ]
+        },
+        "line-opacity": 1
+      }
+    },
+    {
+      "id": "road-motorway",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "road",
+      "minzoom": 0,
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "motorway"
+        ]
+      ],
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round",
+        "visibility": "visible"
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1.5,
+          "stops": [
+            [
+              5,
+              0.75
+            ],
+            [
+              18,
+              32
+            ]
+          ]
+        },
+        "line-opacity": {
+          "base": 1,
+          "stops": [
+            [
+              5,
+              0
+            ],
+            [
+              5.5,
+              1
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "road-rail",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "road",
+      "minzoom": 13,
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "major_rail",
+          "minor_rail"
+        ]
+      ],
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round",
+        "visibility": "visible"
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1.5,
+          "stops": [
+            [
+              14,
+              0.5
+            ],
+            [
+              20,
+              1
+            ]
+          ]
+        },
+        "line-opacity": 1
+      }
+    },
+    {
+      "id": "road-rail-tracks",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "road",
+      "minzoom": 13,
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "major_rail",
+          "minor_rail"
+        ]
+      ],
+      "layout": {
+        "line-cap": "butt",
+        "line-join": "miter",
+        "visibility": "visible"
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1.5,
+          "stops": [
+            [
+              14,
+              4
+            ],
+            [
+              20,
+              8
+            ]
+          ]
+        },
+        "line-opacity": 1
+      }
+    },
+    {
+      "id": "bridge_minor_case",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "bridge",
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "LineString"
+        ],
+        [
+          "in",
+          "class",
+          "motorway_link",
+          "street",
+          "street_limited",
+          "service",
+          "driveway",
+          "path"
+        ]
+      ],
+      "paint": {
+        "line-color": "#eee",
+        "line-width": {
+          "base": 1.6,
+          "stops": [
+            [
+              12,
+              0.5
+            ],
+            [
+              20,
+              10
+            ]
+          ]
+        },
+        "line-gap-width": {
+          "base": 1.55,
+          "stops": [
+            [
+              4,
+              0.25
+            ],
+            [
+              20,
+              20
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "bridge-path",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "bridge",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "class",
+          "path"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#efefef",
+        "line-width": {
+          "base": 1.5,
+          "stops": [
+            [
+              15,
+              1
+            ],
+            [
+              18,
+              4
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "bridge-street-low-zoom",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "bridge",
+      "minzoom": 11,
+      "maxzoom": 14.1,
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "street",
+          "street_limited"
+        ],
+        [
+          "==",
+          "$type",
+          "LineString"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#efefef",
+        "line-width": {
+          "base": 1.5,
+          "stops": [
+            [
+              12.5,
+              0.5
+            ],
+            [
+              14,
+              2
+            ],
+            [
+              18,
+              18
+            ]
+          ]
+        },
+        "line-opacity": {
+          "base": 1,
+          "stops": [
+            [
+              11.5,
+              0
+            ],
+            [
+              12,
+              1
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "bridge-motorway_link",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "bridge",
+      "minzoom": 10,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "motorway_link"
+        ],
+        [
+          "==",
+          "$type",
+          "LineString"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1.5,
+          "stops": [
+            [
+              12.5,
+              0.5
+            ],
+            [
+              14,
+              2
+            ],
+            [
+              18,
+              18
+            ]
+          ]
+        },
+        "line-opacity": 1
+      }
+    },
+    {
+      "id": "bridge-street_limited",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "bridge",
+      "minzoom": 14,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "street_limited"
+        ],
+        [
+          "==",
+          "$type",
+          "LineString"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1.5,
+          "stops": [
+            [
+              12.5,
+              0.5
+            ],
+            [
+              14,
+              2
+            ],
+            [
+              18,
+              18
+            ]
+          ]
+        },
+        "line-opacity": 1
+      }
+    },
+    {
+      "id": "bridge-street",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "bridge",
+      "minzoom": 14,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "street"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1.5,
+          "stops": [
+            [
+              12.5,
+              0.5
+            ],
+            [
+              14,
+              2
+            ],
+            [
+              18,
+              18
+            ]
+          ]
+        },
+        "line-opacity": 1
+      }
+    },
+    {
+      "id": "bridge-main",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "bridge",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "main"
+        ],
+        [
+          "!=",
+          "type",
+          "trunk"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1.5,
+          "stops": [
+            [
+              6,
+              0.5
+            ],
+            [
+              18,
+              26
+            ]
+          ]
+        },
+        "line-opacity": {
+          "base": 1,
+          "stops": [
+            [
+              5,
+              0
+            ],
+            [
+              5.5,
+              1
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "bridge-trunk",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "bridge",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "main"
+        ],
+        [
+          "==",
+          "type",
+          "trunk"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1,
+          "stops": [
+            [
+              3,
+              0.5
+            ],
+            [
+              9,
+              1.25
+            ],
+            [
+              20,
+              10
+            ]
+          ]
+        },
+        "line-opacity": 1
+      }
+    },
+    {
+      "id": "bridge-motorway",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "bridge",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "motorway"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1,
+          "stops": [
+            [
+              3,
+              0.5
+            ],
+            [
+              9,
+              1.25
+            ],
+            [
+              20,
+              10
+            ]
+          ]
+        },
+        "line-opacity": 1
+      }
+    },
+    {
+      "id": "bridge-rail",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "bridge",
+      "minzoom": 13,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "major_rail",
+          "minor_rail"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-cap": "butt",
+        "line-join": "miter",
+        "line-round-limit": 2
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1.5,
+          "stops": [
+            [
+              14,
+              0.5
+            ],
+            [
+              20,
+              1
+            ]
+          ]
+        },
+        "line-opacity": 1
+      }
+    },
+    {
+      "id": "bridge-rail-tracks",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "bridge",
+      "minzoom": 14,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "major_rail",
+          "minor_rail"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-cap": "butt",
+        "line-join": "miter",
+        "line-round-limit": 2
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1.5,
+          "stops": [
+            [
+              14,
+              4
+            ],
+            [
+              20,
+              8
+            ]
+          ]
+        },
+        "line-opacity": 1
+      }
+    },
+    {
+      "id": "bridge-rail-tracks_copy",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "bridge",
+      "minzoom": 14,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "aerialway"
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-cap": "butt",
+        "line-join": "miter",
+        "line-round-limit": 2
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-width": {
+          "base": 1.5,
+          "stops": [
+            [
+              14,
+              0.5
+            ],
+            [
+              20,
+              1
+            ]
+          ]
+        },
+        "line-opacity": 1
+      }
+    },
+    {
+      "id": "admin-3-4-boundaries-bg",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "admin",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          ">=",
+          "admin_level",
+          3
+        ],
+        [
+          "==",
+          "maritime",
+          0
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-join": "bevel"
+      },
+      "paint": {
+        "line-width": {
+          "base": 1,
+          "stops": [
+            [
+              3,
+              3.5
+            ],
+            [
+              12,
+              6
+            ]
+          ]
+        },
+        "line-opacity": {
+          "base": 1,
+          "stops": [
+            [
+              2,
+              0
+            ],
+            [
+              5,
+              0.75
+            ]
+          ]
+        },
+        "line-color": "#fff"
+      }
+    },
+    {
+      "id": "admin-2-boundaries-bg",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "admin",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "admin_level",
+          2
+        ],
+        [
+          "==",
+          "maritime",
+          0
+        ],
+        [
+          "==",
+          "disputed",
+          2
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-join": "miter"
+      },
+      "paint": {
+        "line-color": "#fff",
+        "line-opacity": {
+          "base": 1,
+          "stops": [
+            [
+              3,
+              0
+            ],
+            [
+              4,
+              0.75
+            ]
+          ]
+        },
+        "line-width": {
+          "base": 1,
+          "stops": [
+            [
+              2,
+              3.5
+            ],
+            [
+              10,
+              10
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "admin-3-4-boundaries",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "admin",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          ">=",
+          "admin_level",
+          3
+        ],
+        [
+          "==",
+          "maritime",
+          0
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-join": "miter"
+      },
+      "paint": {
+        "line-color": "#b5b5b5",
+        "line-opacity": {
+          "base": 1,
+          "stops": [
+            [
+              2,
+              0
+            ],
+            [
+              3,
+              1
+            ]
+          ]
+        },
+        "line-width": {
+          "base": 1,
+          "stops": [
+            [
+              3,
+              0.5
+            ],
+            [
+              12,
+              2
+            ]
+          ]
+        },
+        "line-dasharray": {
+          "base": 1,
+          "stops": [
+            [
+              4,
+              [
+                2,
+                0
+              ]
+            ],
+            [
+              5,
+              [
+                2,
+                2,
+                6,
+                2
+              ]
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "admin-2-boundaries",
+      "type": "line",
+      "source": "mapbox",
+      "source-layer": "admin",
+      "minzoom": 1,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "admin_level",
+          2
+        ],
+        [
+          "==",
+          "maritime",
+          0
+        ],
+        [
+          "==",
+          "disputed",
+          0
+        ]
+      ],
+      "layout": {
+        "visibility": "visible",
+        "line-join": "round",
+        "line-cap": "round"
+      },
+      "paint": {
+        "line-color": "#c0c0c0",
+        "line-opacity": 1,
+        "line-width": {
+          "base": 1,
+          "stops": [
+            [
+              3,
+              0.5
+            ],
+            [
+              10,
+              2
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "interstate-motorway_shields",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "road_label",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "in",
+          "shield",
+          "us-interstate",
+          "us-interstate-business",
+          "us-interstate-duplex"
+        ],
+        [
+          "<=",
+          "reflen",
+          6
+        ]
+      ],
+      "layout": {
+        "icon-image": "default-4-small",
+        "text-max-angle": 38,
+        "text-font": [
+          "DIN Offc Pro Bold",
+          "Arial Unicode MS Regular"
+        ],
+        "symbol-placement": "line",
+        "visibility": "none",
+        "text-field": "{ref}",
+        "text-letter-spacing": 0.05,
+        "symbol-spacing": {
+          "base": 1,
+          "stops": [
+            [
+              10,
+              200
+            ],
+            [
+              15,
+              600
+            ]
+          ]
+        },
+        "text-size": {
+          "base": 1,
+          "stops": [
+            [
+              15.95,
+              9
+            ],
+            [
+              16,
+              11
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": "#929292",
+        "text-halo-color": "#fff",
+        "icon-color": "white",
+        "icon-halo-width": 1,
+        "icon-halo-color": "rgba(0, 0, 0, 1)"
+      }
+    },
+    {
+      "id": "waterway-label",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "waterway_label",
+      "minzoom": 12,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "class",
+          "river"
+        ]
+      ],
+      "layout": {
+        "text-font": [
+          "DIN Offc Pro Italic",
+          "Arial Unicode MS Regular"
+        ],
+        "visibility": "visible",
+        "symbol-placement": "line",
+        "text-field": "{name_en}",
+        "text-size": {
+          "base": 1,
+          "stops": [
+            [
+              13,
+              12
+            ],
+            [
+              18,
+              16
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": "#929292"
+      }
+    },
+    {
+      "id": "road-label-sm",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "road_label",
+      "minzoom": 12,
+      "filter": [
+        "all",
+        [
+          "!in",
+          "class",
+          "motorway",
+          "main",
+          "street_limited",
+          "street"
+        ],
+        [
+          "==",
+          "$type",
+          "LineString"
+        ]
+      ],
+      "layout": {
+        "symbol-placement": "line",
+        "text-field": "{name_en}",
+        "text-font": [
+          "DIN Offc Pro Medium",
+          "Arial Unicode MS Bold"
+        ],
+        "text-transform": "none",
+        "text-letter-spacing": 0,
+        "text-padding": 0,
+        "text-size": {
+          "base": 1,
+          "stops": [
+            [
+              8,
+              8
+            ],
+            [
+              20,
+              15
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-halo-color": "#fff",
+        "text-halo-width": 2,
+        "text-color": "#929292"
+      }
+    },
+    {
+      "id": "road-label-med",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "road_label",
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "street",
+          "street_limited"
+        ]
+      ],
+      "layout": {
+        "symbol-placement": "line",
+        "text-field": "{name_en}",
+        "text-font": [
+          "DIN Offc Pro Medium",
+          "Arial Unicode MS Bold"
+        ],
+        "text-transform": "none",
+        "text-letter-spacing": 0,
+        "text-padding": 0,
+        "text-size": {
+          "base": 1,
+          "stops": [
+            [
+              8,
+              8
+            ],
+            [
+              20,
+              16
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-halo-color": "#fff",
+        "text-halo-width": 2,
+        "text-color": "#929292"
+      }
+    },
+    {
+      "id": "road-label-large",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "road_label",
+      "filter": [
+        "all",
+        [
+          "in",
+          "class",
+          "motorway",
+          "main"
+        ]
+      ],
+      "layout": {
+        "symbol-placement": "line",
+        "text-field": "{name_en}",
+        "text-font": [
+          "DIN Offc Pro Medium",
+          "Arial Unicode MS Bold"
+        ],
+        "text-transform": "none",
+        "text-letter-spacing": 0,
+        "text-padding": 0,
+        "text-size": {
+          "base": 1,
+          "stops": [
+            [
+              8,
+              8
+            ],
+            [
+              20,
+              17
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-halo-color": "#fff",
+        "text-halo-width": 2,
+        "text-color": "#929292"
+      }
+    },
+    {
+      "id": "airport-label",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "poi_label",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "in",
+          "maki",
+          "airport",
+          "heliport",
+          "rocket"
+        ],
+        [
+          "<=",
+          "scalerank",
+          2
+        ]
+      ],
+      "layout": {
+        "text-font": [
+          "DIN Offc Pro Medium",
+          "Arial Unicode MS Regular"
+        ],
+        "visibility": "visible",
+        "text-field": {
+          "base": 1,
+          "stops": [
+            [
+              12,
+              ""
+            ],
+            [
+              13,
+              "{name_en}"
+            ]
+          ]
+        },
+        "text-max-width": 9,
+        "text-size": {
+          "base": 1,
+          "stops": [
+            [
+              10,
+              10
+            ],
+            [
+              18,
+              18
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": "#666",
+        "text-halo-color": "#fff",
+        "text-halo-width": 1,
+        "text-halo-blur": 0
+      }
+    },
+    {
+      "id": "poi-parks-scalerank1",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "poi_label",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "maki",
+          "park"
+        ],
+        [
+          "<=",
+          "scalerank",
+          1
+        ]
+      ],
+      "layout": {
+        "text-max-width": 8,
+        "visibility": "visible",
+        "text-field": "{name_en}",
+        "text-font": [
+          "DIN Offc Pro Regular",
+          "Arial Unicode MS Regular"
+        ],
+        "text-size": {
+          "base": 1,
+          "stops": [
+            [
+              10,
+              10
+            ],
+            [
+              18,
+              14
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": "#4f4f4f",
+        "text-halo-color": "#fff",
+        "text-halo-width": 1
+      }
+    },
+    {
+      "id": "poi-scalerank1",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "poi_label",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "!in",
+          "maki",
+          "rail-light",
+          "rail-metro",
+          "rail",
+          "airport",
+          "airfield",
+          "heliport",
+          "rocket",
+          "park",
+          "golf",
+          "cemetary",
+          "zoo",
+          "campsite",
+          "swimming",
+          "dog-park"
+        ],
+        [
+          "<=",
+          "scalerank",
+          1
+        ]
+      ],
+      "layout": {
+        "text-max-width": 8,
+        "visibility": "visible",
+        "text-field": "{name_en}",
+        "text-font": [
+          "DIN Offc Pro Regular",
+          "Arial Unicode MS Regular"
+        ],
+        "text-size": {
+          "base": 1,
+          "stops": [
+            [
+              10,
+              10
+            ],
+            [
+              18,
+              14
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": "#5a5a5a",
+        "text-halo-color": "#fff",
+        "text-halo-width": 1
+      }
+    },
+    {
+      "id": "water-label",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "water_label",
+      "minzoom": 5,
+      "maxzoom": 22,
+      "layout": {
+        "text-font": [
+          "DIN Offc Pro Italic",
+          "Arial Unicode MS Regular"
+        ],
+        "visibility": "visible",
+        "text-field": "{name_en}",
+        "text-max-width": 7,
+        "text-size": {
+          "base": 1,
+          "stops": [
+            [
+              13,
+              12
+            ],
+            [
+              18,
+              16
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              "#929292"
+            ],
+            [
+              20,
+              "#929292"
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "place_label_neighborhood",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "place_label",
+      "minzoom": 12,
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "Point"
+        ],
+        [
+          "in",
+          "type",
+          "suburb",
+          "neighbourhood"
+        ]
+      ],
+      "layout": {
+        "text-field": "{name_en}",
+        "text-font": [
+          "DIN Offc Pro Bold",
+          "Arial Unicode MS Bold"
+        ],
+        "text-max-width": 7,
+        "text-letter-spacing": 0.1,
+        "text-transform": "uppercase",
+        "text-size": {
+          "stops": [
+            [
+              12,
+              10
+            ],
+            [
+              16,
+              14
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": "#666",
+        "text-halo-color": "#fff",
+        "text-halo-width": 1,
+        "text-halo-blur": 1,
+        "text-opacity": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              0
+            ],
+            [
+              12,
+              0.66
+            ],
+            [
+              13,
+              1
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "place_label_other",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "place_label",
+      "minzoom": 8,
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "Point"
+        ],
+        [
+          "in",
+          "type",
+          "town",
+          "village",
+          "hamlet"
+        ]
+      ],
+      "layout": {
+        "text-field": "{name_en}",
+        "text-font": [
+          "DIN Offc Pro Regular",
+          "Arial Unicode MS Bold"
+        ],
+        "text-max-width": 15,
+        "text-size": {
+          "stops": [
+            [
+              6,
+              10
+            ],
+            [
+              12,
+              13
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": "#666",
+        "text-halo-color": "#fff",
+        "text-halo-width": 1,
+        "text-halo-blur": 1
+      }
+    },
+    {
+      "id": "place_label_city_small_s",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "place_label",
+      "maxzoom": 12,
+      "filter": [
+        "all",
+        [
+          "==",
+          "type",
+          "city"
+        ],
+        [
+          ">",
+          "scalerank",
+          4
+        ],
+        [
+          "in",
+          "ldir",
+          "S",
+          "E",
+          "SE",
+          "SW"
+        ]
+      ],
+      "layout": {
+        "text-field": "{name_en}",
+        "text-font": [
+          "DIN Offc Pro Medium",
+          "Arial Unicode MS Bold"
+        ],
+        "text-max-width": 10,
+        "text-anchor": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              "top"
+            ],
+            [
+              6,
+              "center"
+            ]
+          ]
+        },
+        "text-offset": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              [
+                0,
+                0.1
+              ]
+            ],
+            [
+              6,
+              [
+                0,
+                0
+              ]
+            ]
+          ]
+        },
+        "text-size": {
+          "stops": [
+            [
+              6,
+              11
+            ],
+            [
+              14,
+              19
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": "#666",
+        "text-halo-color": "#fff",
+        "text-halo-width": 1.5,
+        "text-halo-blur": 0
+      }
+    },
+    {
+      "id": "place_label_city_small_n",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "place_label",
+      "maxzoom": 12,
+      "filter": [
+        "all",
+        [
+          "==",
+          "type",
+          "city"
+        ],
+        [
+          ">",
+          "scalerank",
+          4
+        ],
+        [
+          "in",
+          "ldir",
+          "N",
+          "W",
+          "NW",
+          "NE"
+        ]
+      ],
+      "layout": {
+        "text-field": "{name_en}",
+        "text-font": [
+          "DIN Offc Pro Medium",
+          "Arial Unicode MS Bold"
+        ],
+        "text-max-width": 10,
+        "text-anchor": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              "bottom"
+            ],
+            [
+              6,
+              "center"
+            ]
+          ]
+        },
+        "text-offset": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              [
+                0,
+                -0.2
+              ]
+            ],
+            [
+              6,
+              [
+                0,
+                0
+              ]
+            ]
+          ]
+        },
+        "text-size": {
+          "stops": [
+            [
+              6,
+              11
+            ],
+            [
+              14,
+              19
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": "#666",
+        "text-halo-color": "#fff",
+        "text-halo-width": 1.5,
+        "text-halo-blur": 0
+      }
+    },
+    {
+      "id": "place_label_city_medium_s",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "place_label",
+      "maxzoom": 10,
+      "filter": [
+        "all",
+        [
+          "==",
+          "type",
+          "city"
+        ],
+        [
+          "<=",
+          "scalerank",
+          4
+        ],
+        [
+          ">",
+          "scalerank",
+          1
+        ],
+        [
+          "in",
+          "ldir",
+          "S",
+          "E",
+          "SE",
+          "SW"
+        ]
+      ],
+      "layout": {
+        "text-field": "{name_en}",
+        "text-font": [
+          "DIN Offc Pro Medium",
+          "Arial Unicode MS Bold"
+        ],
+        "text-max-width": 10,
+        "text-anchor": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              "top"
+            ],
+            [
+              6,
+              "center"
+            ]
+          ]
+        },
+        "text-offset": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              [
+                0,
+                0.1
+              ]
+            ],
+            [
+              6,
+              [
+                0,
+                0
+              ]
+            ]
+          ]
+        },
+        "text-size": {
+          "stops": [
+            [
+              5,
+              11
+            ],
+            [
+              12,
+              19
+            ]
+          ],
+          "base": 0.9
+        }
+      },
+      "paint": {
+        "text-color": "#666",
+        "text-halo-color": "#fff",
+        "text-halo-width": 1.5,
+        "text-halo-blur": 0
+      }
+    },
+    {
+      "id": "place_label_city_medium_n",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "place_label",
+      "maxzoom": 10,
+      "filter": [
+        "all",
+        [
+          "==",
+          "type",
+          "city"
+        ],
+        [
+          "<=",
+          "scalerank",
+          4
+        ],
+        [
+          ">",
+          "scalerank",
+          1
+        ],
+        [
+          "in",
+          "ldir",
+          "N",
+          "W",
+          "NW",
+          "NE"
+        ]
+      ],
+      "layout": {
+        "text-field": "{name_en}",
+        "text-font": [
+          "DIN Offc Pro Medium",
+          "Arial Unicode MS Bold"
+        ],
+        "text-max-width": 10,
+        "text-anchor": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              "bottom"
+            ],
+            [
+              6,
+              "center"
+            ]
+          ]
+        },
+        "text-offset": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              [
+                0,
+                -0.2
+              ]
+            ],
+            [
+              6,
+              [
+                0,
+                0
+              ]
+            ]
+          ]
+        },
+        "text-size": {
+          "stops": [
+            [
+              5,
+              11
+            ],
+            [
+              12,
+              19
+            ]
+          ],
+          "base": 0.9
+        }
+      },
+      "paint": {
+        "text-color": "#666",
+        "text-halo-color": "#fff",
+        "text-halo-width": 1.5,
+        "text-halo-blur": 0
+      }
+    },
+    {
+      "id": "place_label_city_large_s",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "place_label",
+      "maxzoom": 10,
+      "filter": [
+        "all",
+        [
+          "==",
+          "type",
+          "city"
+        ],
+        [
+          "<=",
+          "scalerank",
+          1
+        ],
+        [
+          "in",
+          "ldir",
+          "S",
+          "SE",
+          "SW",
+          "E"
+        ]
+      ],
+      "layout": {
+        "text-field": "{name_en}",
+        "text-font": [
+          "DIN Offc Pro Bold",
+          "Arial Unicode MS Bold"
+        ],
+        "text-max-width": 15,
+        "text-transform": "none",
+        "text-anchor": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              "top"
+            ],
+            [
+              6,
+              "center"
+            ]
+          ]
+        },
+        "text-offset": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              [
+                0,
+                0.1
+              ]
+            ],
+            [
+              6,
+              [
+                0,
+                0
+              ]
+            ]
+          ]
+        },
+        "text-size": {
+          "stops": [
+            [
+              4,
+              11
+            ],
+            [
+              10,
+              20
+            ]
+          ],
+          "base": 0.9
+        }
+      },
+      "paint": {
+        "text-color": "#666",
+        "text-halo-color": "#fff",
+        "text-halo-width": 1.5,
+        "text-halo-blur": 0
+      }
+    },
+    {
+      "id": "place_label_city_large_n",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "place_label",
+      "maxzoom": 10,
+      "filter": [
+        "all",
+        [
+          "<=",
+          "scalerank",
+          1
+        ],
+        [
+          "in",
+          "ldir",
+          "N",
+          "NE",
+          "NW",
+          "W"
+        ],
+        [
+          "==",
+          "type",
+          "city"
+        ]
+      ],
+      "layout": {
+        "text-field": "{name_en}",
+        "text-font": [
+          "DIN Offc Pro Bold",
+          "Arial Unicode MS Bold"
+        ],
+        "text-max-width": 5,
+        "text-transform": "none",
+        "text-anchor": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              "bottom"
+            ],
+            [
+              6,
+              "center"
+            ]
+          ]
+        },
+        "text-offset": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              [
+                0,
+                -0.2
+              ]
+            ],
+            [
+              6,
+              [
+                0,
+                0
+              ]
+            ]
+          ]
+        },
+        "symbol-avoid-edges": false,
+        "text-size": {
+          "stops": [
+            [
+              4,
+              11
+            ],
+            [
+              10,
+              20
+            ]
+          ],
+          "base": 0.9
+        }
+      },
+      "paint": {
+        "text-color": "#666",
+        "text-halo-color": "#fff",
+        "text-halo-width": 1.5,
+        "text-halo-blur": 0
+      }
+    },
+    {
+      "id": "marine_label_point_other",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "marine_label",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "Point"
+        ],
+        [
+          "in",
+          "labelrank",
+          4,
+          5,
+          6
+        ]
+      ],
+      "layout": {
+        "text-max-width": 8,
+        "visibility": "none",
+        "symbol-placement": "point",
+        "text-field": "{name_en}",
+        "text-line-height": 1.2,
+        "text-letter-spacing": 0.1,
+        "text-font": [
+          "DIN Offc Pro Regular",
+          "Arial Unicode MS Regular"
+        ],
+        "text-size": {
+          "base": 1,
+          "stops": [
+            [
+              4,
+              12
+            ],
+            [
+              6,
+              16
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": "#666"
+      }
+    },
+    {
+      "id": "marine_label_point_3",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "marine_label",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "Point"
+        ],
+        [
+          "==",
+          "labelrank",
+          3
+        ]
+      ],
+      "layout": {
+        "text-max-width": 8,
+        "visibility": "visible",
+        "symbol-placement": "point",
+        "text-field": "{name_en}",
+        "text-line-height": 1.3,
+        "text-letter-spacing": 0.1,
+        "text-font": [
+          "DIN Offc Pro Medium",
+          "Arial Unicode MS Regular"
+        ],
+        "text-size": {
+          "base": 1,
+          "stops": [
+            [
+              3,
+              13
+            ],
+            [
+              5,
+              18
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": "#666",
+        "text-opacity": 0.25
+      }
+    },
+    {
+      "id": "marine_label_point_2",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "marine_label",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "Point"
+        ],
+        [
+          "==",
+          "labelrank",
+          2
+        ]
+      ],
+      "layout": {
+        "text-max-width": 8,
+        "visibility": "visible",
+        "symbol-placement": "point",
+        "text-field": "{name_en}",
+        "text-line-height": 1.2,
+        "text-letter-spacing": 0,
+        "text-font": [
+          "DIN Offc Pro Medium",
+          "Arial Unicode MS Regular"
+        ],
+        "text-size": {
+          "base": 1,
+          "stops": [
+            [
+              3,
+              14
+            ],
+            [
+              5,
+              24
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": "#666",
+        "text-opacity": 0.25
+      }
+    },
+    {
+      "id": "marine_label_point_1",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "marine_label",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "Point"
+        ],
+        [
+          "==",
+          "labelrank",
+          1
+        ]
+      ],
+      "layout": {
+        "text-max-width": 4,
+        "visibility": "visible",
+        "symbol-placement": "point",
+        "text-field": "{name_en}",
+        "text-line-height": 1.5,
+        "text-letter-spacing": 0.25,
+        "text-font": [
+          "DIN Offc Pro Medium",
+          "Arial Unicode MS Regular"
+        ],
+        "text-size": {
+          "base": 1,
+          "stops": [
+            [
+              1,
+              12
+            ],
+            [
+              4,
+              30
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": "#666",
+        "text-opacity": 0.25
+      }
+    },
+    {
+      "id": "marine_label_line_other",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "marine_label",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "LineString"
+        ],
+        [
+          "in",
+          "labelrank",
+          4,
+          5,
+          6
+        ]
+      ],
+      "layout": {
+        "text-max-width": 15,
+        "visibility": "visible",
+        "symbol-placement": "line",
+        "text-field": "{name_en}",
+        "text-line-height": 1.2,
+        "text-letter-spacing": 0,
+        "text-font": [
+          "DIN Offc Pro Medium",
+          "Arial Unicode MS Regular"
+        ],
+        "text-size": {
+          "base": 1,
+          "stops": [
+            [
+              4,
+              12
+            ],
+            [
+              6,
+              16
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": "#666",
+        "text-opacity": 0.25
+      }
+    },
+    {
+      "id": "marine_label_line_3",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "marine_label",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "LineString"
+        ],
+        [
+          "==",
+          "labelrank",
+          3
+        ]
+      ],
+      "layout": {
+        "text-max-width": 15,
+        "visibility": "visible",
+        "symbol-placement": "line",
+        "text-field": "{name_en}",
+        "text-line-height": 1.2,
+        "text-letter-spacing": 0,
+        "text-font": [
+          "DIN Offc Pro Medium",
+          "Arial Unicode MS Regular"
+        ],
+        "text-size": {
+          "base": 1,
+          "stops": [
+            [
+              3,
+              13
+            ],
+            [
+              5,
+              18
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": "#666",
+        "text-opacity": 0.25
+      }
+    },
+    {
+      "id": "marine_label_line_2",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "marine_label",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "LineString"
+        ],
+        [
+          "==",
+          "labelrank",
+          2
+        ]
+      ],
+      "layout": {
+        "text-max-width": 15,
+        "visibility": "visible",
+        "symbol-placement": "line",
+        "text-field": "{name_en}",
+        "text-line-height": 1.2,
+        "text-letter-spacing": 0,
+        "text-font": [
+          "DIN Offc Pro Medium",
+          "Arial Unicode MS Regular"
+        ],
+        "text-size": {
+          "base": 1,
+          "stops": [
+            [
+              3,
+              14
+            ],
+            [
+              5,
+              24
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": "#666",
+        "text-opacity": 0.25
+      }
+    },
+    {
+      "id": "marine_label_line_1",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "marine_label",
+      "minzoom": 0,
+      "maxzoom": 22,
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "LineString"
+        ],
+        [
+          "==",
+          "labelrank",
+          1
+        ]
+      ],
+      "layout": {
+        "text-max-width": 15,
+        "visibility": "visible",
+        "symbol-placement": "line",
+        "text-field": "{name_en}",
+        "text-line-height": 1.2,
+        "text-letter-spacing": 0.4,
+        "text-font": [
+          "DIN Offc Pro Medium",
+          "Arial Unicode MS Regular"
+        ],
+        "text-size": {
+          "base": 1,
+          "stops": [
+            [
+              3,
+              25
+            ],
+            [
+              4,
+              30
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": "#666",
+        "text-opacity": 0.25
+      }
+    },
+    {
+      "id": "state-label-lg",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "state_label",
+      "minzoom": 3,
+      "maxzoom": 7,
+      "filter": [
+        "all",
+        [
+          ">=",
+          "area",
+          80000
+        ]
+      ],
+      "layout": {
+        "text-transform": "uppercase",
+        "visibility": "visible",
+        "text-field": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              "{abbr}"
+            ],
+            [
+              4,
+              "{name_en}"
+            ]
+          ]
+        },
+        "text-font": [
+          "DIN Offc Pro Bold",
+          "Arial Unicode MS Regular"
+        ],
+        "text-letter-spacing": 0.15,
+        "text-max-width": 7,
+        "text-size": {
+          "base": 1,
+          "stops": [
+            [
+              4,
+              9
+            ],
+            [
+              7,
+              18
+            ]
+          ]
+        }
+      },
+      "paint": {
+        "text-color": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              "#929292"
+            ],
+            [
+              20,
+              "#929292"
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "country-label-sm",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "country_label",
+      "minzoom": 1,
+      "maxzoom": 10,
+      "filter": [
+        "all",
+        [
+          ">=",
+          "scalerank",
+          5
+        ]
+      ],
+      "layout": {
+        "text-field": "{name_en}",
+        "text-font": [
+          "DIN Offc Pro Medium",
+          "Arial Unicode MS Regular"
+        ],
+        "text-max-width": 7,
+        "text-size": {
+          "stops": [
+            [
+              3,
+              8
+            ],
+            [
+              9,
+              18
+            ]
+          ],
+          "base": 0.9
+        }
+      },
+      "paint": {
+        "text-color": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              "#444"
+            ],
+            [
+              10,
+              "#888"
+            ]
+          ]
+        },
+        "text-halo-color": "#fff",
+        "text-halo-width": 1,
+        "text-halo-blur": 1
+      }
+    },
+    {
+      "id": "country-label-md",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "country_label",
+      "minzoom": 1,
+      "maxzoom": 8,
+      "filter": [
+        "all",
+        [
+          "in",
+          "scalerank",
+          3,
+          4
+        ]
+      ],
+      "layout": {
+        "text-field": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              "{code}"
+            ],
+            [
+              2,
+              "{name_en}"
+            ]
+          ]
+        },
+        "text-font": [
+          "DIN Offc Pro Medium",
+          "Arial Unicode MS Regular"
+        ],
+        "text-max-width": 7,
+        "text-size": {
+          "stops": [
+            [
+              2,
+              8
+            ],
+            [
+              7,
+              18
+            ]
+          ],
+          "base": 0.9
+        }
+      },
+      "paint": {
+        "text-color": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              "#444"
+            ],
+            [
+              10,
+              "#888"
+            ]
+          ]
+        },
+        "text-halo-color": "#fff",
+        "text-halo-width": 1,
+        "text-halo-blur": 1
+      }
+    },
+    {
+      "id": "country-label-lg",
+      "type": "symbol",
+      "source": "mapbox",
+      "source-layer": "country_label",
+      "maxzoom": 12,
+      "filter": [
+        "all",
+        [
+          "in",
+          "scalerank",
+          1,
+          2
+        ]
+      ],
+      "layout": {
+        "text-field": "{name_en}",
+        "text-font": [
+          "DIN Offc Pro Medium",
+          "Arial Unicode MS Regular"
+        ],
+        "text-max-width": 6,
+        "text-size": {
+          "stops": [
+            [
+              1,
+              9
+            ],
+            [
+              5,
+              18
+            ]
+          ],
+          "base": 0.9
+        }
+      },
+      "paint": {
+        "text-color": {
+          "base": 1,
+          "stops": [
+            [
+              0,
+              "#444"
+            ],
+            [
+              10,
+              "#888"
+            ]
+          ]
+        },
+        "text-halo-color": "#fff",
+        "text-halo-width": 1,
+        "text-halo-blur": 1
+      }
+    }
+  ],
+  "owner": "andreasviglakis",
+  "modified": "2015-04-27T23:19:35.558Z",
+  "created": "2015-04-27T23:19:35.558Z",
+  "id": "andreasviglakis.3081d695"
+}
+
+},{}],27:[function(require,module,exports){
 module.exports={
   "version": 8,
   "name": "Light",
@@ -6060,7 +9899,120 @@ module.exports={
   "id": "andreasviglakis.3081d695"
 }
 
-},{}],26:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
+//import request from 'superagent';
+
+'use strict';
+
+Object.defineProperty(exports, '__esModule', {
+  value: true
+});
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+var HEIGHT = 400;
+var WIDTH = 600;
+var audioBuffer = null;
+var source = null;
+
+var AudioProcessing = (function () {
+  function AudioProcessing(url, context, callback) {
+    _classCallCheck(this, AudioProcessing);
+
+    //window.AudioContext = window.AudioContext||window.webkitAudioContext;
+    var analyser = context.createAnalyser();
+    var request = new XMLHttpRequest();
+    request.open('GET', url, true);
+    request.responseType = 'arraybuffer';
+
+    // Decode asynchronously
+    request.onload = (function () {
+      context.decodeAudioData(request.response, (function (buffer) {
+        //audioBuffer = buffer;
+        source = context.createBufferSource(); // creates a sound source
+        source.buffer = buffer; // tell the source which sound to play
+
+        source.connect(analyser);
+
+        this.analyser = analyser;
+
+        // this.visualize();
+
+        source.connect(context.destination); // connect the source to the context's destination (the speakers)
+        source.start(0);
+        callback(null);
+      }).bind(this), function (error) {
+        callback(error);
+        console.error('decodeAudioData error', error);
+      });
+    }).bind(this);
+    request.send();
+
+    console.log(url);
+    //  var input = context.createMediaStreamSource(stream);
+
+    // var analyser = context.createAnalyser();
+
+    // // Connect graph.
+    // input.connect(analyser);
+
+    // this.analyser = analyser;
+
+    // this.visualize();
+    //  console.log(context);
+  }
+
+  _createClass(AudioProcessing, [{
+    key: 'getVolume',
+    value: function getVolume() {
+      var freqDomain = new Uint8Array(this.analyser.frequencyBinCount);
+      this.analyser.getByteFrequencyData(freqDomain);
+      var values = 0;
+      var average;
+
+      var length = freqDomain.length;
+
+      // get all the frequency amplitudes
+      for (var i = 0; i < length; i++) {
+        values += freqDomain[i];
+      }
+
+      average = values / length;
+      return average;
+    }
+  }, {
+    key: 'visualize',
+    value: function visualize() {
+      console.log("visualizing");
+      var freqDomain = new Uint8Array(this.analyser.frequencyBinCount);
+      this.analyser.getByteFrequencyData(freqDomain);
+      // console.log(freqDomain);
+      //  //draw viz
+      //   this.drawContext.clearRect(0, 0, WIDTH, HEIGHT);
+      //   for (var i = 0; i <freqDomain.length; i++) {
+      // var value = freqDomain[i];
+      // var percent = value / 256;
+      // var height = HEIGHT * percent;
+      // var offset = HEIGHT - height - 1;
+      // var barWidth = WIDTH/freqDomain.length;
+      // var hue = i/freqDomain.length * 360;
+      // this.drawContext.fillStyle = 'hsl(' + hue + ', 100%, 50%)';
+      // this.drawContext.fillRect(i * barWidth, offset, barWidth, height);
+      //}
+      // console.log(freqDomain);
+      // requestAnimationFrame(this.visualize.bind(this));
+    }
+  }]);
+
+  return AudioProcessing;
+})();
+
+exports['default'] = AudioProcessing;
+module.exports = exports['default'];
+
+},{}],29:[function(require,module,exports){
 'use strict';
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
@@ -6081,7 +10033,7 @@ _reactRouter2['default'].run(_routes2['default'], _reactRouter2['default'].Histo
   _react2['default'].render(_react2['default'].createElement(Handler, null), document.getElementById('app'));
 });
 
-},{"./routes":27,"react":"react","react-router":"react-router"}],27:[function(require,module,exports){
+},{"./routes":30,"react":"react","react-router":"react-router"}],30:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -6112,9 +10064,13 @@ var _componentsWeb = require('./components/Web');
 
 var _componentsWeb2 = _interopRequireDefault(_componentsWeb);
 
-var _componentsPatrimonioForm = require('./components/PatrimonioForm');
+var _componentsSvgHex = require('./components/SvgHex');
 
-var _componentsPatrimonioForm2 = _interopRequireDefault(_componentsPatrimonioForm);
+var _componentsSvgHex2 = _interopRequireDefault(_componentsSvgHex);
+
+var _componentsSoundIcon = require('./components/SoundIcon');
+
+var _componentsSoundIcon2 = _interopRequireDefault(_componentsSoundIcon);
 
 exports['default'] = _react2['default'].createElement(
   _reactRouter.Route,
@@ -6122,11 +10078,11 @@ exports['default'] = _react2['default'].createElement(
   _react2['default'].createElement(_reactRouter.Route, { path: '/admin', handler: _componentsAdmin2['default'] }),
   _react2['default'].createElement(_reactRouter.Route, { path: '/projeccion', handler: _componentsProjeccion2['default'] }),
   _react2['default'].createElement(_reactRouter.Route, { path: '/web', handler: _componentsWeb2['default'] }),
-  _react2['default'].createElement(_reactRouter.Route, { path: '/', handler: _componentsPatrimonioForm2['default'] })
+  _react2['default'].createElement(_reactRouter.Route, { path: '/', handler: _componentsSoundIcon2['default'] })
 );
 module.exports = exports['default'];
 
-},{"./components/Admin":2,"./components/App":4,"./components/PatrimonioForm":18,"./components/Projeccion":20,"./components/Web":22,"react":"react","react-router":"react-router"}],28:[function(require,module,exports){
+},{"./components/Admin":2,"./components/App":4,"./components/Projeccion":20,"./components/SoundIcon":22,"./components/SvgHex":23,"./components/Web":24,"react":"react","react-router":"react-router"}],31:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -6218,7 +10174,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],29:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -6265,7 +10221,7 @@ var BrowserSupportCore = {
 };
 
 module.exports = BrowserSupportCore;
-},{"./getVendorPrefixedName":65}],30:[function(require,module,exports){
+},{"./getVendorPrefixedName":68}],33:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -6425,7 +10381,7 @@ var DOMMouseMoveTracker = (function () {
 })();
 
 module.exports = DOMMouseMoveTracker;
-},{"./EventListener":31,"./cancelAnimationFramePolyfill":59,"./requestAnimationFramePolyfill":75}],31:[function(require,module,exports){
+},{"./EventListener":34,"./cancelAnimationFramePolyfill":62,"./requestAnimationFramePolyfill":78}],34:[function(require,module,exports){
 (function (process){
 /**
  * Copyright (c) 2015, Facebook, Inc.
@@ -6505,7 +10461,7 @@ var EventListener = {
 
 module.exports = EventListener;
 }).call(this,require('_process'))
-},{"./emptyFunction":64,"_process":28}],32:[function(require,module,exports){
+},{"./emptyFunction":67,"_process":31}],35:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -6544,7 +10500,7 @@ var ExecutionEnvironment = {
 };
 
 module.exports = ExecutionEnvironment;
-},{}],33:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -7601,7 +11557,7 @@ var HorizontalScrollbar = React.createClass({
 module.exports = FixedDataTable;
 // isColumnResizing should be overwritten by value from props if
 // avaialble
-},{"./FixedDataTableBufferedRows.react":34,"./FixedDataTableColumnResizeHandle.react":39,"./FixedDataTableHelper":40,"./FixedDataTableRow.react":42,"./FixedDataTableScrollHelper":44,"./FixedDataTableWidthHelper":45,"./React":53,"./ReactComponentWithPureRenderMixin":54,"./ReactWheelHandler":55,"./Scrollbar.react":56,"./cx":62,"./debounceCore":63,"./emptyFunction":64,"./invariant":66,"./joinClasses":69,"./shallowEqual":76,"./translateDOMPositionXY":77}],34:[function(require,module,exports){
+},{"./FixedDataTableBufferedRows.react":37,"./FixedDataTableColumnResizeHandle.react":42,"./FixedDataTableHelper":43,"./FixedDataTableRow.react":45,"./FixedDataTableScrollHelper":47,"./FixedDataTableWidthHelper":48,"./React":56,"./ReactComponentWithPureRenderMixin":57,"./ReactWheelHandler":58,"./Scrollbar.react":59,"./cx":65,"./debounceCore":66,"./emptyFunction":67,"./invariant":69,"./joinClasses":72,"./shallowEqual":79,"./translateDOMPositionXY":80}],37:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -7758,7 +11714,7 @@ var FixedDataTableBufferedRows = React.createClass({
 });
 
 module.exports = FixedDataTableBufferedRows;
-},{"./FixedDataTableRow.react":42,"./FixedDataTableRowBuffer":43,"./React":53,"./cx":62,"./emptyFunction":64,"./joinClasses":69,"./translateDOMPositionXY":77}],35:[function(require,module,exports){
+},{"./FixedDataTableRow.react":45,"./FixedDataTableRowBuffer":46,"./React":56,"./cx":65,"./emptyFunction":67,"./joinClasses":72,"./translateDOMPositionXY":80}],38:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -7957,7 +11913,7 @@ var FixedDataTableCell = React.createClass({
 });
 
 module.exports = FixedDataTableCell;
-},{"./FixedDataTableHelper":40,"./ImmutableObject":47,"./React":53,"./ReactComponentWithPureRenderMixin":54,"./cx":62,"./joinClasses":69}],36:[function(require,module,exports){
+},{"./FixedDataTableHelper":43,"./ImmutableObject":50,"./React":56,"./ReactComponentWithPureRenderMixin":57,"./cx":65,"./joinClasses":72}],39:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -8188,7 +12144,7 @@ var FixedDataTableCellGroup = React.createClass({
 });
 
 module.exports = FixedDataTableCellGroup;
-},{"./FixedDataTableCell.react":35,"./FixedDataTableHelper":40,"./ImmutableObject":47,"./React":53,"./ReactComponentWithPureRenderMixin":54,"./cx":62,"./translateDOMPositionXY":77}],37:[function(require,module,exports){
+},{"./FixedDataTableCell.react":38,"./FixedDataTableHelper":43,"./ImmutableObject":50,"./React":56,"./ReactComponentWithPureRenderMixin":57,"./cx":65,"./translateDOMPositionXY":80}],40:[function(require,module,exports){
 (function (process){
 /**
  * Copyright (c) 2015, Facebook, Inc.
@@ -8380,7 +12336,7 @@ var FixedDataTableColumn = React.createClass({
 
 module.exports = FixedDataTableColumn;
 }).call(this,require('_process'))
-},{"./React":53,"_process":28}],38:[function(require,module,exports){
+},{"./React":56,"_process":31}],41:[function(require,module,exports){
 (function (process){
 /**
  * Copyright (c) 2015, Facebook, Inc.
@@ -8464,7 +12420,7 @@ var FixedDataTableColumnGroup = React.createClass({
 
 module.exports = FixedDataTableColumnGroup;
 }).call(this,require('_process'))
-},{"./React":53,"_process":28}],39:[function(require,module,exports){
+},{"./React":56,"_process":31}],42:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -8625,7 +12581,7 @@ var FixedDataTableColumnResizeHandle = React.createClass({
 });
 
 module.exports = FixedDataTableColumnResizeHandle;
-},{"./DOMMouseMoveTracker":30,"./Locale":51,"./React":53,"./ReactComponentWithPureRenderMixin":54,"./clamp":60,"./cx":62}],40:[function(require,module,exports){
+},{"./DOMMouseMoveTracker":33,"./Locale":54,"./React":56,"./ReactComponentWithPureRenderMixin":57,"./clamp":63,"./cx":65}],43:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -8730,7 +12686,7 @@ var FixedDataTableHelper = {
 };
 
 module.exports = FixedDataTableHelper;
-},{"./FixedDataTableColumn.react":37,"./FixedDataTableColumnGroup.react":38,"./Locale":51,"./React":53}],41:[function(require,module,exports){
+},{"./FixedDataTableColumn.react":40,"./FixedDataTableColumnGroup.react":41,"./Locale":54,"./React":56}],44:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -8757,7 +12713,7 @@ var FixedDataTableRoot = {
 FixedDataTableRoot.version = '0.4.6';
 
 module.exports = FixedDataTableRoot;
-},{"./FixedDataTable.react":33,"./FixedDataTableColumn.react":37,"./FixedDataTableColumnGroup.react":38}],42:[function(require,module,exports){
+},{"./FixedDataTable.react":36,"./FixedDataTableColumn.react":40,"./FixedDataTableColumnGroup.react":41}],45:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -9020,7 +12976,7 @@ var FixedDataTableRow = React.createClass({
 });
 
 module.exports = FixedDataTableRow;
-},{"./FixedDataTableCellGroup.react":36,"./React":53,"./ReactComponentWithPureRenderMixin":54,"./cx":62,"./joinClasses":69,"./translateDOMPositionXY":77}],43:[function(require,module,exports){
+},{"./FixedDataTableCellGroup.react":39,"./React":56,"./ReactComponentWithPureRenderMixin":57,"./cx":65,"./joinClasses":72,"./translateDOMPositionXY":80}],46:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -9144,7 +13100,7 @@ var FixedDataTableRowBuffer = (function () {
 })();
 
 module.exports = FixedDataTableRowBuffer;
-},{"./IntegerBufferSet":49,"./clamp":60,"./invariant":66}],44:[function(require,module,exports){
+},{"./IntegerBufferSet":52,"./clamp":63,"./invariant":69}],47:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -9445,7 +13401,7 @@ var FixedDataTableScrollHelper = (function () {
 })();
 
 module.exports = FixedDataTableScrollHelper;
-},{"./PrefixIntervalTree":52,"./clamp":60}],45:[function(require,module,exports){
+},{"./PrefixIntervalTree":55,"./clamp":63}],48:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -9579,7 +13535,7 @@ var FixedDataTableWidthHelper = {
 };
 
 module.exports = FixedDataTableWidthHelper;
-},{"./React":53}],46:[function(require,module,exports){
+},{"./React":56}],49:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -9759,7 +13715,7 @@ var Heap = (function () {
 })();
 
 module.exports = Heap;
-},{}],47:[function(require,module,exports){
+},{}],50:[function(require,module,exports){
 (function (process){
 /**
  * Copyright (c) 2015, Facebook, Inc.
@@ -9963,7 +13919,7 @@ function _setDeep(obj, put) {
 
 module.exports = ImmutableObject;
 }).call(this,require('_process'))
-},{"./ImmutableValue":48,"./invariant":66,"./keyOf":71,"./mergeHelpers":72,"_process":28}],48:[function(require,module,exports){
+},{"./ImmutableValue":51,"./invariant":69,"./keyOf":74,"./mergeHelpers":75,"_process":31}],51:[function(require,module,exports){
 'use strict';
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -10106,7 +14062,7 @@ var ImmutableValue = (function () {
 ImmutableValue._DONT_EVER_TYPE_THIS_SECRET_KEY = Math.random();
 
 module.exports = ImmutableValue;
-},{"./invariant":66,"./isNode":68,"./keyOf":71}],49:[function(require,module,exports){
+},{"./invariant":69,"./isNode":71,"./keyOf":74}],52:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -10287,7 +14243,7 @@ var IntegerBufferSet = (function () {
 })();
 
 module.exports = IntegerBufferSet;
-},{"./Heap":46,"./invariant":66}],50:[function(require,module,exports){
+},{"./Heap":49,"./invariant":69}],53:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -10325,7 +14281,7 @@ module.exports = {
   NUMPAD_0: 96,
   NUMPAD_9: 105
 };
-},{}],51:[function(require,module,exports){
+},{}],54:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -10350,7 +14306,7 @@ var Locale = {
 };
 
 module.exports = Locale;
-},{}],52:[function(require,module,exports){
+},{}],55:[function(require,module,exports){
 (function (global){
 /**
  * Copyright (c) 2015, Facebook, Inc.
@@ -10611,7 +14567,7 @@ module.exports = PrefixIntervalTree;
  * Binary heap
  */
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./invariant":66}],53:[function(require,module,exports){
+},{"./invariant":69}],56:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -10626,7 +14582,7 @@ module.exports = PrefixIntervalTree;
 'use strict';
 
 module.exports = require('react');
-},{"react":"react"}],54:[function(require,module,exports){
+},{"react":"react"}],57:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -10698,7 +14654,7 @@ var ReactComponentWithPureRenderMixin = {
 };
 
 module.exports = ReactComponentWithPureRenderMixin;
-},{}],55:[function(require,module,exports){
+},{}],58:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -10804,7 +14760,7 @@ var ReactWheelHandler = (function () {
 })();
 
 module.exports = ReactWheelHandler;
-},{"./emptyFunction":64,"./normalizeWheel":74,"./requestAnimationFramePolyfill":75}],56:[function(require,module,exports){
+},{"./emptyFunction":67,"./normalizeWheel":77,"./requestAnimationFramePolyfill":78}],59:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -11251,7 +15207,7 @@ Scrollbar.KEYBOARD_SCROLL_AMOUNT = KEYBOARD_SCROLL_AMOUNT;
 Scrollbar.SIZE = parseInt(cssVar('scrollbar-size'), 10);
 
 module.exports = Scrollbar;
-},{"./DOMMouseMoveTracker":30,"./Keys":50,"./React":53,"./ReactComponentWithPureRenderMixin":54,"./ReactWheelHandler":55,"./cssVar":61,"./cx":62,"./emptyFunction":64,"./translateDOMPositionXY":77}],57:[function(require,module,exports){
+},{"./DOMMouseMoveTracker":33,"./Keys":53,"./React":56,"./ReactComponentWithPureRenderMixin":57,"./ReactWheelHandler":58,"./cssVar":64,"./cx":65,"./emptyFunction":67,"./translateDOMPositionXY":80}],60:[function(require,module,exports){
 /**
  * Copyright 2004-present Facebook. All Rights Reserved.
  *
@@ -11530,7 +15486,7 @@ var UserAgent_DEPRECATED = {
 };
 
 module.exports = UserAgent_DEPRECATED;
-},{}],58:[function(require,module,exports){
+},{}],61:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -11563,7 +15519,7 @@ function camelize(string) {
 }
 
 module.exports = camelize;
-},{}],59:[function(require,module,exports){
+},{}],62:[function(require,module,exports){
 (function (global){
 /**
  * Copyright (c) 2015, Facebook, Inc.
@@ -11586,7 +15542,7 @@ var cancelAnimationFrame = global.cancelAnimationFrame || global.webkitCancelAni
 
 module.exports = cancelAnimationFrame;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],60:[function(require,module,exports){
+},{}],63:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -11618,7 +15574,7 @@ function clamp(min, value, max) {
 }
 
 module.exports = clamp;
-},{}],61:[function(require,module,exports){
+},{}],64:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -11659,7 +15615,7 @@ function cssVar(name) {
 cssVar.CSS_VARS = CSS_VARS;
 
 module.exports = cssVar;
-},{}],62:[function(require,module,exports){
+},{}],65:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -11714,7 +15670,7 @@ function cx(classNames) {
 }
 
 module.exports = cx;
-},{}],63:[function(require,module,exports){
+},{}],66:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -11782,7 +15738,7 @@ function debounce(func, wait, context, setTimeoutFunc, clearTimeoutFunc) {
 }
 
 module.exports = debounce;
-},{}],64:[function(require,module,exports){
+},{}],67:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -11821,7 +15777,7 @@ emptyFunction.thatReturnsArgument = function (arg) {
 };
 
 module.exports = emptyFunction;
-},{}],65:[function(require,module,exports){
+},{}],68:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -11874,7 +15830,7 @@ function getVendorPrefixedName(property) {
 }
 
 module.exports = getVendorPrefixedName;
-},{"./ExecutionEnvironment":32,"./camelize":58,"./invariant":66}],66:[function(require,module,exports){
+},{"./ExecutionEnvironment":35,"./camelize":61,"./invariant":69}],69:[function(require,module,exports){
 (function (process){
 /**
  * Copyright (c) 2015, Facebook, Inc.
@@ -11926,7 +15882,7 @@ var invariant = function invariant(condition, format, a, b, c, d, e, f) {
 
 module.exports = invariant;
 }).call(this,require('_process'))
-},{"_process":28}],67:[function(require,module,exports){
+},{"_process":31}],70:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -11987,7 +15943,7 @@ function isEventSupported(eventNameSuffix, capture) {
 }
 
 module.exports = isEventSupported;
-},{"./ExecutionEnvironment":32}],68:[function(require,module,exports){
+},{"./ExecutionEnvironment":35}],71:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -12011,7 +15967,7 @@ function isNode(object) {
 }
 
 module.exports = isNode;
-},{}],69:[function(require,module,exports){
+},{}],72:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -12051,7 +16007,7 @@ function joinClasses(className /*, ... */) {
 }
 
 module.exports = joinClasses;
-},{}],70:[function(require,module,exports){
+},{}],73:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -12100,7 +16056,7 @@ var keyMirror = function keyMirror(obj) {
 };
 
 module.exports = keyMirror;
-},{"./invariant":66}],71:[function(require,module,exports){
+},{"./invariant":69}],74:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -12136,7 +16092,7 @@ var keyOf = function keyOf(oneKeyObj) {
 };
 
 module.exports = keyOf;
-},{}],72:[function(require,module,exports){
+},{}],75:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -12256,7 +16212,7 @@ var mergeHelpers = {
 };
 
 module.exports = mergeHelpers;
-},{"./invariant":66,"./keyMirror":70}],73:[function(require,module,exports){
+},{"./invariant":69,"./keyMirror":73}],76:[function(require,module,exports){
 (function (global){
 /**
  * Copyright (c) 2015, Facebook, Inc.
@@ -12275,7 +16231,7 @@ var nativeRequestAnimationFrame = global.requestAnimationFrame || global.webkitR
 
 module.exports = nativeRequestAnimationFrame;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],74:[function(require,module,exports){
+},{}],77:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -12472,7 +16428,7 @@ normalizeWheel.getEventType = function () /*string*/{
 };
 
 module.exports = normalizeWheel;
-},{"./UserAgent_DEPRECATED":57,"./isEventSupported":67}],75:[function(require,module,exports){
+},{"./UserAgent_DEPRECATED":60,"./isEventSupported":70}],78:[function(require,module,exports){
 (function (global){
 /**
  * Copyright (c) 2015, Facebook, Inc.
@@ -12510,7 +16466,7 @@ requestAnimationFrame(emptyFunction);
 
 module.exports = requestAnimationFrame;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./emptyFunction":64,"./nativeRequestAnimationFrame":73}],76:[function(require,module,exports){
+},{"./emptyFunction":67,"./nativeRequestAnimationFrame":76}],79:[function(require,module,exports){
 /**
  * Copyright (c) 2015, Facebook, Inc.
  * All rights reserved.
@@ -12559,7 +16515,7 @@ function shallowEqual(objA, objB) {
 }
 
 module.exports = shallowEqual;
-},{}],77:[function(require,module,exports){
+},{}],80:[function(require,module,exports){
 (function (global){
 /**
  * Copyright (c) 2015, Facebook, Inc.
@@ -12610,10 +16566,10 @@ var translateDOMPositionXY = (function () {
 
 module.exports = translateDOMPositionXY;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./BrowserSupportCore":29,"./getVendorPrefixedName":65}],78:[function(require,module,exports){
+},{"./BrowserSupportCore":32,"./getVendorPrefixedName":68}],81:[function(require,module,exports){
 module.exports = require('./internal/FixedDataTableRoot');
 
-},{"./internal/FixedDataTableRoot":41}],79:[function(require,module,exports){
+},{"./internal/FixedDataTableRoot":44}],82:[function(require,module,exports){
 /*jshint node:true */
 
 'use strict';
@@ -12705,7 +16661,7 @@ var CheckboxGroup = React.createClass({
 });
 
 module.exports = CheckboxGroup;
-},{"./mixins/component":85,"./row":88,"formsy-react":92,"react":"react"}],80:[function(require,module,exports){
+},{"./mixins/component":88,"./row":91,"formsy-react":95,"react":"react"}],83:[function(require,module,exports){
 /*jshint node:true */
 
 'use strict';
@@ -12781,7 +16737,7 @@ var Checkbox = React.createClass({
 });
 
 module.exports = Checkbox;
-},{"./mixins/component":85,"./row":88,"formsy-react":92,"react":"react"}],81:[function(require,module,exports){
+},{"./mixins/component":88,"./row":91,"formsy-react":95,"react":"react"}],84:[function(require,module,exports){
 'use strict';
 
 var React = require('react');
@@ -12806,7 +16762,7 @@ var Icon = React.createClass({
 });
 
 module.exports = Icon;
-},{"react":"react"}],82:[function(require,module,exports){
+},{"react":"react"}],85:[function(require,module,exports){
 /*jshint node:true */
 
 'use strict';
@@ -12879,7 +16835,7 @@ var File = React.createClass({
 });
 
 module.exports = File;
-},{"./icon":81,"./mixins/component":85,"./row":88,"formsy-react":92,"react":"react"}],83:[function(require,module,exports){
+},{"./icon":84,"./mixins/component":88,"./row":91,"formsy-react":95,"react":"react"}],86:[function(require,module,exports){
 /*jshint node:true */
 
 'use strict';
@@ -12960,7 +16916,7 @@ var Input = React.createClass({
 });
 
 module.exports = Input;
-},{"./icon":81,"./mixins/component":85,"./row":88,"formsy-react":92,"react":"react"}],84:[function(require,module,exports){
+},{"./icon":84,"./mixins/component":88,"./row":91,"formsy-react":95,"react":"react"}],87:[function(require,module,exports){
 'use strict';
 
 module.exports = {
@@ -12976,7 +16932,7 @@ module.exports = {
     ComponentMixin: require('./mixins/component'),
     ParentContextMixin: require('./mixins/parent-context')
 };
-},{"./checkbox":80,"./checkbox-group":79,"./icon":81,"./input":83,"./input-file":82,"./mixins/component":85,"./mixins/parent-context":86,"./radio-group":87,"./row":88,"./select":89,"./textarea":90}],85:[function(require,module,exports){
+},{"./checkbox":83,"./checkbox-group":82,"./icon":84,"./input":86,"./input-file":85,"./mixins/component":88,"./mixins/parent-context":89,"./radio-group":90,"./row":91,"./select":92,"./textarea":93}],88:[function(require,module,exports){
 'use strict';
 
 var React = require('react');
@@ -13053,7 +17009,7 @@ module.exports = {
         return this.isValid() === false;
     }
 };
-},{"react":"react"}],86:[function(require,module,exports){
+},{"react":"react"}],89:[function(require,module,exports){
 'use strict';
 
 var React = require('react');
@@ -13077,7 +17033,7 @@ module.exports = {
     }
 
 };
-},{"react":"react"}],87:[function(require,module,exports){
+},{"react":"react"}],90:[function(require,module,exports){
 /*jshint node:true */
 
 'use strict';
@@ -13181,7 +17137,7 @@ var RadioGroup = React.createClass({
 });
 
 module.exports = RadioGroup;
-},{"./mixins/component":85,"./row":88,"formsy-react":92,"react":"react"}],88:[function(require,module,exports){
+},{"./mixins/component":88,"./row":91,"formsy-react":95,"react":"react"}],91:[function(require,module,exports){
 /*jshint node:true */
 
 'use strict';
@@ -13286,7 +17242,7 @@ var Row = React.createClass({
 });
 
 module.exports = Row;
-},{"react":"react"}],89:[function(require,module,exports){
+},{"react":"react"}],92:[function(require,module,exports){
 /*jshint node:true */
 
 'use strict';
@@ -13366,7 +17322,7 @@ var Select = React.createClass({
 });
 
 module.exports = Select;
-},{"./mixins/component":85,"./row":88,"formsy-react":92,"react":"react"}],90:[function(require,module,exports){
+},{"./mixins/component":88,"./row":91,"formsy-react":95,"react":"react"}],93:[function(require,module,exports){
 /*jshint node:true */
 
 'use strict';
@@ -13435,7 +17391,7 @@ var Textarea = React.createClass({
 });
 
 module.exports = Textarea;
-},{"./mixins/component":85,"./row":88,"formsy-react":92,"react":"react"}],91:[function(require,module,exports){
+},{"./mixins/component":88,"./row":91,"formsy-react":95,"react":"react"}],94:[function(require,module,exports){
 var utils = require('./utils.js');
 
 var convertValidationsToObject = function (validations) {
@@ -13588,7 +17544,7 @@ module.exports = {
   }
 };
 
-},{"./utils.js":93}],92:[function(require,module,exports){
+},{"./utils.js":96}],95:[function(require,module,exports){
 (function (global){
 var React = global.React || require('react');
 var Formsy = {};
@@ -14045,7 +18001,7 @@ if (!global.exports && !global.module && (!global.define || !global.define.amd))
 module.exports = Formsy;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./Mixin.js":91,"./utils.js":93,"./validationRules.js":94,"react":"react"}],93:[function(require,module,exports){
+},{"./Mixin.js":94,"./utils.js":96,"./validationRules.js":97,"react":"react"}],96:[function(require,module,exports){
 module.exports = {
   arraysDiffer: function (a, b) {
     var isDifferent = false;
@@ -14088,7 +18044,7 @@ module.exports = {
   }
 };
 
-},{}],94:[function(require,module,exports){
+},{}],97:[function(require,module,exports){
 var isExisty = function (value) {
   return value !== null && value !== undefined;
 };
@@ -14164,7 +18120,7 @@ var validations = {
 
 module.exports = validations;
 
-},{}],95:[function(require,module,exports){
+},{}],98:[function(require,module,exports){
 'use strict';
 
 var React = require('react');
@@ -14222,7 +18178,7 @@ var Option = React.createClass({
 });
 
 module.exports = Option;
-},{"classnames":99,"react":"react"}],96:[function(require,module,exports){
+},{"classnames":102,"react":"react"}],99:[function(require,module,exports){
 /* disable some rules until we refactor more completely; fixing them now would
    cause conflicts with some open PRs unnecessarily. */
 /* eslint react/jsx-sort-prop-types: 0, react/sort-comp: 0, react/prop-types: 0 */
@@ -15097,7 +19053,7 @@ var Select = React.createClass({
 });
 
 module.exports = Select;
-},{"./Option":95,"./SingleValue":97,"./Value":98,"classnames":99,"react":"react","react-input-autosize":100}],97:[function(require,module,exports){
+},{"./Option":98,"./SingleValue":100,"./Value":101,"classnames":102,"react":"react","react-input-autosize":103}],100:[function(require,module,exports){
 'use strict';
 
 var React = require('react');
@@ -15126,7 +19082,7 @@ var SingleValue = React.createClass({
 });
 
 module.exports = SingleValue;
-},{"classnames":99,"react":"react"}],98:[function(require,module,exports){
+},{"classnames":102,"react":"react"}],101:[function(require,module,exports){
 'use strict';
 
 var React = require('react');
@@ -15211,7 +19167,7 @@ var Value = React.createClass({
 });
 
 module.exports = Value;
-},{"classnames":99,"react":"react"}],99:[function(require,module,exports){
+},{"classnames":102,"react":"react"}],102:[function(require,module,exports){
 /*!
   Copyright (c) 2015 Jed Watson.
   Licensed under the MIT License (MIT), see
@@ -15262,7 +19218,7 @@ module.exports = Value;
 
 }());
 
-},{}],100:[function(require,module,exports){
+},{}],103:[function(require,module,exports){
 'use strict';
 
 var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
@@ -15369,2266 +19325,7 @@ var AutosizeInput = React.createClass({
 });
 
 module.exports = AutosizeInput;
-},{"react":"react"}],101:[function(require,module,exports){
-/**
- * Copyright 2013-2014, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule ResponderEventPlugin
- */
-
-"use strict";
-
-var EventConstants = require('react/lib/EventConstants');
-var EventPluginUtils = require('react/lib/EventPluginUtils');
-var EventPropagators = require('react/lib/EventPropagators');
-var SyntheticEvent = require('react/lib/SyntheticEvent');
-
-var accumulateInto = require('react/lib/accumulateInto');
-var keyOf = require('react/lib/keyOf');
-
-var isStartish = EventPluginUtils.isStartish;
-var isMoveish = EventPluginUtils.isMoveish;
-var isEndish = EventPluginUtils.isEndish;
-var executeDirectDispatch = EventPluginUtils.executeDirectDispatch;
-var hasDispatches = EventPluginUtils.hasDispatches;
-var executeDispatchesInOrderStopAtTrue =
-  EventPluginUtils.executeDispatchesInOrderStopAtTrue;
-
-/**
- * ID of element that should respond to touch/move types of interactions, as
- * indicated explicitly by relevant callbacks.
- */
-var responderID = null;
-var isPressing = false;
-
-var eventTypes = {
-  /**
-   * On a `touchStart`/`mouseDown`, is it desired that this element become the
-   * responder?
-   */
-  startShouldSetResponder: {
-    phasedRegistrationNames: {
-      bubbled: keyOf({onStartShouldSetResponder: null}),
-      captured: keyOf({onStartShouldSetResponderCapture: null})
-    }
-  },
-
-  /**
-   * On a `scroll`, is it desired that this element become the responder? This
-   * is usually not needed, but should be used to retroactively infer that a
-   * `touchStart` had occured during momentum scroll. During a momentum scroll,
-   * a touch start will be immediately followed by a scroll event if the view is
-   * currently scrolling.
-   */
-  scrollShouldSetResponder: {
-    phasedRegistrationNames: {
-      bubbled: keyOf({onScrollShouldSetResponder: null}),
-      captured: keyOf({onScrollShouldSetResponderCapture: null})
-    }
-  },
-
-  /**
-   * On a `touchMove`/`mouseMove`, is it desired that this element become the
-   * responder?
-   */
-  moveShouldSetResponder: {
-    phasedRegistrationNames: {
-      bubbled: keyOf({onMoveShouldSetResponder: null}),
-      captured: keyOf({onMoveShouldSetResponderCapture: null})
-    }
-  },
-
-  /**
-   * Direct responder events dispatched directly to responder. Do not bubble.
-   */
-  responderMove: {registrationName: keyOf({onResponderMove: null})},
-  responderRelease: {registrationName: keyOf({onResponderRelease: null})},
-  responderTerminationRequest: {
-    registrationName: keyOf({onResponderTerminationRequest: null})
-  },
-  responderGrant: {registrationName: keyOf({onResponderGrant: null})},
-  responderReject: {registrationName: keyOf({onResponderReject: null})},
-  responderTerminate: {registrationName: keyOf({onResponderTerminate: null})}
-};
-
-/**
- * Performs negotiation between any existing/current responder, checks to see if
- * any new entity is interested in becoming responder, performs that handshake
- * and returns any events that must be emitted to notify the relevant parties.
- *
- * A note about event ordering in the `EventPluginHub`.
- *
- * Suppose plugins are injected in the following order:
- *
- * `[R, S, C]`
- *
- * To help illustrate the example, assume `S` is `SimpleEventPlugin` (for
- * `onClick` etc) and `R` is `ResponderEventPlugin`.
- *
- * "Deferred-Dispatched Events":
- *
- * - The current event plugin system will traverse the list of injected plugins,
- *   in order, and extract events by collecting the plugin's return value of
- *   `extractEvents()`.
- * - These events that are returned from `extractEvents` are "deferred
- *   dispatched events".
- * - When returned from `extractEvents`, deferred-dispatched events contain an
- *   "accumulation" of deferred dispatches.
- * - These deferred dispatches are accumulated/collected before they are
- *   returned, but processed at a later time by the `EventPluginHub` (hence the
- *   name deferred).
- *
- * In the process of returning their deferred-dispatched events, event plugins
- * themselves can dispatch events on-demand without returning them from
- * `extractEvents`. Plugins might want to do this, so that they can use event
- * dispatching as a tool that helps them decide which events should be extracted
- * in the first place.
- *
- * "On-Demand-Dispatched Events":
- *
- * - On-demand-dispatched events are not returned from `extractEvents`.
- * - On-demand-dispatched events are dispatched during the process of returning
- *   the deferred-dispatched events.
- * - They should not have side effects.
- * - They should be avoided, and/or eventually be replaced with another
- *   abstraction that allows event plugins to perform multiple "rounds" of event
- *   extraction.
- *
- * Therefore, the sequence of event dispatches becomes:
- *
- * - `R`s on-demand events (if any)   (dispatched by `R` on-demand)
- * - `S`s on-demand events (if any)   (dispatched by `S` on-demand)
- * - `C`s on-demand events (if any)   (dispatched by `C` on-demand)
- * - `R`s extracted events (if any)   (dispatched by `EventPluginHub`)
- * - `S`s extracted events (if any)   (dispatched by `EventPluginHub`)
- * - `C`s extracted events (if any)   (dispatched by `EventPluginHub`)
- *
- * In the case of `ResponderEventPlugin`: If the `startShouldSetResponder`
- * on-demand dispatch returns `true` (and some other details are satisfied) the
- * `onResponderGrant` deferred dispatched event is returned from
- * `extractEvents`. The sequence of dispatch executions in this case
- * will appear as follows:
- *
- * - `startShouldSetResponder` (`ResponderEventPlugin` dispatches on-demand)
- * - `touchStartCapture`       (`EventPluginHub` dispatches as usual)
- * - `touchStart`              (`EventPluginHub` dispatches as usual)
- * - `responderGrant/Reject`   (`EventPluginHub` dispatches as usual)
- *
- * @param {string} topLevelType Record from `EventConstants`.
- * @param {string} topLevelTargetID ID of deepest React rendered element.
- * @param {object} nativeEvent Native browser event.
- * @return {*} An accumulation of synthetic events.
- */
-function setResponderAndExtractTransfer(
-    topLevelType,
-    topLevelTargetID,
-    nativeEvent) {
-  var shouldSetEventType =
-    isStartish(topLevelType) ? eventTypes.startShouldSetResponder :
-    isMoveish(topLevelType) ? eventTypes.moveShouldSetResponder :
-    eventTypes.scrollShouldSetResponder;
-
-  var bubbleShouldSetFrom = responderID || topLevelTargetID;
-  var shouldSetEvent = SyntheticEvent.getPooled(
-    shouldSetEventType,
-    bubbleShouldSetFrom,
-    nativeEvent
-  );
-  EventPropagators.accumulateTwoPhaseDispatches(shouldSetEvent);
-  var wantsResponderID = executeDispatchesInOrderStopAtTrue(shouldSetEvent);
-  if (!shouldSetEvent.isPersistent()) {
-    shouldSetEvent.constructor.release(shouldSetEvent);
-  }
-
-  if (!wantsResponderID || wantsResponderID === responderID) {
-    return null;
-  }
-  var extracted;
-  var grantEvent = SyntheticEvent.getPooled(
-    eventTypes.responderGrant,
-    wantsResponderID,
-    nativeEvent
-  );
-
-  EventPropagators.accumulateDirectDispatches(grantEvent);
-  if (responderID) {
-    var terminationRequestEvent = SyntheticEvent.getPooled(
-      eventTypes.responderTerminationRequest,
-      responderID,
-      nativeEvent
-    );
-    EventPropagators.accumulateDirectDispatches(terminationRequestEvent);
-    var shouldSwitch = !hasDispatches(terminationRequestEvent) ||
-      executeDirectDispatch(terminationRequestEvent);
-    if (!terminationRequestEvent.isPersistent()) {
-      terminationRequestEvent.constructor.release(terminationRequestEvent);
-    }
-
-    if (shouldSwitch) {
-      var terminateType = eventTypes.responderTerminate;
-      var terminateEvent = SyntheticEvent.getPooled(
-        terminateType,
-        responderID,
-        nativeEvent
-      );
-      EventPropagators.accumulateDirectDispatches(terminateEvent);
-      extracted = accumulateInto(extracted, [grantEvent, terminateEvent]);
-      responderID = wantsResponderID;
-    } else {
-      var rejectEvent = SyntheticEvent.getPooled(
-        eventTypes.responderReject,
-        wantsResponderID,
-        nativeEvent
-      );
-      EventPropagators.accumulateDirectDispatches(rejectEvent);
-      extracted = accumulateInto(extracted, rejectEvent);
-    }
-  } else {
-    extracted = accumulateInto(extracted, grantEvent);
-    responderID = wantsResponderID;
-  }
-  return extracted;
-}
-
-/**
- * A transfer is a negotiation between a currently set responder and the next
- * element to claim responder status. Any start event could trigger a transfer
- * of responderID. Any move event could trigger a transfer, so long as there is
- * currently a responder set (in other words as long as the user is pressing
- * down).
- *
- * @param {string} topLevelType Record from `EventConstants`.
- * @return {boolean} True if a transfer of responder could possibly occur.
- */
-function canTriggerTransfer(topLevelType) {
-  return topLevelType === EventConstants.topLevelTypes.topScroll ||
-         isStartish(topLevelType) ||
-         (isPressing && isMoveish(topLevelType));
-}
-
-/**
- * Event plugin for formalizing the negotiation between claiming locks on
- * receiving touches.
- */
-var ResponderEventPlugin = {
-
-  getResponderID: function() {
-    return responderID;
-  },
-
-  eventTypes: eventTypes,
-
-  /**
-   * @param {string} topLevelType Record from `EventConstants`.
-   * @param {DOMEventTarget} topLevelTarget The listening component root node.
-   * @param {string} topLevelTargetID ID of `topLevelTarget`.
-   * @param {object} nativeEvent Native browser event.
-   * @return {*} An accumulation of synthetic events.
-   * @see {EventPluginHub.extractEvents}
-   */
-  extractEvents: function(
-      topLevelType,
-      topLevelTarget,
-      topLevelTargetID,
-      nativeEvent) {
-    var extracted;
-    // Must have missed an end event - reset the state here.
-    if (responderID && isStartish(topLevelType)) {
-      responderID = null;
-    }
-    if (isStartish(topLevelType)) {
-      isPressing = true;
-    } else if (isEndish(topLevelType)) {
-      isPressing = false;
-    }
-    if (canTriggerTransfer(topLevelType)) {
-      var transfer = setResponderAndExtractTransfer(
-        topLevelType,
-        topLevelTargetID,
-        nativeEvent
-      );
-      if (transfer) {
-        extracted = accumulateInto(extracted, transfer);
-      }
-    }
-    // Now that we know the responder is set correctly, we can dispatch
-    // responder type events (directly to the responder).
-    var type = isMoveish(topLevelType) ? eventTypes.responderMove :
-      isEndish(topLevelType) ? eventTypes.responderRelease :
-      isStartish(topLevelType) ? eventTypes.responderStart : null;
-    if (type) {
-      var gesture = SyntheticEvent.getPooled(
-        type,
-        responderID || '',
-        nativeEvent
-      );
-      EventPropagators.accumulateDirectDispatches(gesture);
-      extracted = accumulateInto(extracted, gesture);
-    }
-    if (type === eventTypes.responderRelease) {
-      responderID = null;
-    }
-    return extracted;
-  }
-
-};
-
-module.exports = ResponderEventPlugin;
-
-},{"react/lib/EventConstants":105,"react/lib/EventPluginUtils":108,"react/lib/EventPropagators":109,"react/lib/SyntheticEvent":112,"react/lib/accumulateInto":115,"react/lib/keyOf":121}],102:[function(require,module,exports){
-/**
- * Copyright 2013-2014 Facebook, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * @providesModule TapEventPlugin
- * @typechecks static-only
- */
-
-"use strict";
-
-var EventConstants = require('react/lib/EventConstants');
-var EventPluginUtils = require('react/lib/EventPluginUtils');
-var EventPropagators = require('react/lib/EventPropagators');
-var SyntheticUIEvent = require('react/lib/SyntheticUIEvent');
-var TouchEventUtils = require('./TouchEventUtils');
-var ViewportMetrics = require('react/lib/ViewportMetrics');
-
-var keyOf = require('react/lib/keyOf');
-var topLevelTypes = EventConstants.topLevelTypes;
-
-var isStartish = EventPluginUtils.isStartish;
-var isEndish = EventPluginUtils.isEndish;
-
-var isTouch = function(topLevelType) {
-  var touchTypes = [
-    topLevelTypes.topTouchCancel,
-    topLevelTypes.topTouchEnd,
-    topLevelTypes.topTouchStart,
-    topLevelTypes.topTouchMove
-  ];
-  return touchTypes.indexOf(topLevelType) >= 0;
-}
-
-/**
- * Number of pixels that are tolerated in between a `touchStart` and `touchEnd`
- * in order to still be considered a 'tap' event.
- */
-var tapMoveThreshold = 10;
-var ignoreMouseThreshold = 750;
-var startCoords = {x: null, y: null};
-var lastTouchEvent = null;
-
-var Axis = {
-  x: {page: 'pageX', client: 'clientX', envScroll: 'currentPageScrollLeft'},
-  y: {page: 'pageY', client: 'clientY', envScroll: 'currentPageScrollTop'}
-};
-
-function getAxisCoordOfEvent(axis, nativeEvent) {
-  var singleTouch = TouchEventUtils.extractSingleTouch(nativeEvent);
-  if (singleTouch) {
-    return singleTouch[axis.page];
-  }
-  return axis.page in nativeEvent ?
-    nativeEvent[axis.page] :
-    nativeEvent[axis.client] + ViewportMetrics[axis.envScroll];
-}
-
-function getDistance(coords, nativeEvent) {
-  var pageX = getAxisCoordOfEvent(Axis.x, nativeEvent);
-  var pageY = getAxisCoordOfEvent(Axis.y, nativeEvent);
-  return Math.pow(
-    Math.pow(pageX - coords.x, 2) + Math.pow(pageY - coords.y, 2),
-    0.5
-  );
-}
-
-var dependencies = [
-  topLevelTypes.topMouseDown,
-  topLevelTypes.topMouseMove,
-  topLevelTypes.topMouseUp
-];
-
-if (EventPluginUtils.useTouchEvents) {
-  dependencies.push(
-    topLevelTypes.topTouchEnd,
-    topLevelTypes.topTouchStart,
-    topLevelTypes.topTouchMove
-  );
-}
-
-var eventTypes = {
-  touchTap: {
-    phasedRegistrationNames: {
-      bubbled: keyOf({onTouchTap: null}),
-      captured: keyOf({onTouchTapCapture: null})
-    },
-    dependencies: dependencies
-  }
-};
-
-var now = function() {
-  if (Date.now) {
-    return Date.now();
-  } else {
-    // IE8 support: http://stackoverflow.com/questions/9430357/please-explain-why-and-how-new-date-works-as-workaround-for-date-now-in
-    return +new Date;
-  }
-}
-
-var TapEventPlugin = {
-
-  tapMoveThreshold: tapMoveThreshold,
-
-  ignoreMouseThreshold: ignoreMouseThreshold,
-
-  eventTypes: eventTypes,
-
-  /**
-   * @param {string} topLevelType Record from `EventConstants`.
-   * @param {DOMEventTarget} topLevelTarget The listening component root node.
-   * @param {string} topLevelTargetID ID of `topLevelTarget`.
-   * @param {object} nativeEvent Native browser event.
-   * @return {*} An accumulation of synthetic events.
-   * @see {EventPluginHub.extractEvents}
-   */
-  extractEvents: function(
-      topLevelType,
-      topLevelTarget,
-      topLevelTargetID,
-      nativeEvent) {
-
-    if (isTouch(topLevelType)) {
-      lastTouchEvent = now();
-    } else {
-      if (lastTouchEvent && (now() - lastTouchEvent) < ignoreMouseThreshold) {
-        return null;
-      }
-    }
-
-    if (!isStartish(topLevelType) && !isEndish(topLevelType)) {
-      return null;
-    }
-    var event = null;
-    var distance = getDistance(startCoords, nativeEvent);
-    if (isEndish(topLevelType) && distance < tapMoveThreshold) {
-      event = SyntheticUIEvent.getPooled(
-        eventTypes.touchTap,
-        topLevelTargetID,
-        nativeEvent
-      );
-    }
-    if (isStartish(topLevelType)) {
-      startCoords.x = getAxisCoordOfEvent(Axis.x, nativeEvent);
-      startCoords.y = getAxisCoordOfEvent(Axis.y, nativeEvent);
-    } else if (isEndish(topLevelType)) {
-      startCoords.x = 0;
-      startCoords.y = 0;
-    }
-    EventPropagators.accumulateTwoPhaseDispatches(event);
-    return event;
-  }
-
-};
-
-module.exports = TapEventPlugin;
-
-},{"./TouchEventUtils":103,"react/lib/EventConstants":105,"react/lib/EventPluginUtils":108,"react/lib/EventPropagators":109,"react/lib/SyntheticUIEvent":113,"react/lib/ViewportMetrics":114,"react/lib/keyOf":121}],103:[function(require,module,exports){
-/**
- * Copyright 2013-2014 Facebook, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * @providesModule TouchEventUtils
- */
-
-var TouchEventUtils = {
-  /**
-   * Utility function for common case of extracting out the primary touch from a
-   * touch event.
-   * - `touchEnd` events usually do not have the `touches` property.
-   *   http://stackoverflow.com/questions/3666929/
-   *   mobile-sarai-touchend-event-not-firing-when-last-touch-is-removed
-   *
-   * @param {Event} nativeEvent Native event that may or may not be a touch.
-   * @return {TouchesObject?} an object with pageX and pageY or null.
-   */
-  extractSingleTouch: function(nativeEvent) {
-    var touches = nativeEvent.touches;
-    var changedTouches = nativeEvent.changedTouches;
-    var hasTouches = touches && touches.length > 0;
-    var hasChangedTouches = changedTouches && changedTouches.length > 0;
-
-    return !hasTouches && hasChangedTouches ? changedTouches[0] :
-           hasTouches ? touches[0] :
-           nativeEvent;
-  }
-};
-
-module.exports = TouchEventUtils;
-
-},{}],104:[function(require,module,exports){
-module.exports = function injectTapEventPlugin () {
-  var React = require("react");
-  React.initializeTouchEvents(true);
-
-  require('react/lib/EventPluginHub').injection.injectEventPluginsByName({
-    "ResponderEventPlugin": require('./ResponderEventPlugin.js'),
-    "TapEventPlugin":       require('./TapEventPlugin.js')
-  });
-};
-
-},{"./ResponderEventPlugin.js":101,"./TapEventPlugin.js":102,"react":"react","react/lib/EventPluginHub":106}],105:[function(require,module,exports){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule EventConstants
- */
-
-'use strict';
-
-var keyMirror = require("./keyMirror");
-
-var PropagationPhases = keyMirror({bubbled: null, captured: null});
-
-/**
- * Types of raw signals from the browser caught at the top level.
- */
-var topLevelTypes = keyMirror({
-  topBlur: null,
-  topChange: null,
-  topClick: null,
-  topCompositionEnd: null,
-  topCompositionStart: null,
-  topCompositionUpdate: null,
-  topContextMenu: null,
-  topCopy: null,
-  topCut: null,
-  topDoubleClick: null,
-  topDrag: null,
-  topDragEnd: null,
-  topDragEnter: null,
-  topDragExit: null,
-  topDragLeave: null,
-  topDragOver: null,
-  topDragStart: null,
-  topDrop: null,
-  topError: null,
-  topFocus: null,
-  topInput: null,
-  topKeyDown: null,
-  topKeyPress: null,
-  topKeyUp: null,
-  topLoad: null,
-  topMouseDown: null,
-  topMouseMove: null,
-  topMouseOut: null,
-  topMouseOver: null,
-  topMouseUp: null,
-  topPaste: null,
-  topReset: null,
-  topScroll: null,
-  topSelectionChange: null,
-  topSubmit: null,
-  topTextInput: null,
-  topTouchCancel: null,
-  topTouchEnd: null,
-  topTouchMove: null,
-  topTouchStart: null,
-  topWheel: null
-});
-
-var EventConstants = {
-  topLevelTypes: topLevelTypes,
-  PropagationPhases: PropagationPhases
-};
-
-module.exports = EventConstants;
-
-},{"./keyMirror":120}],106:[function(require,module,exports){
-(function (process){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule EventPluginHub
- */
-
-'use strict';
-
-var EventPluginRegistry = require("./EventPluginRegistry");
-var EventPluginUtils = require("./EventPluginUtils");
-
-var accumulateInto = require("./accumulateInto");
-var forEachAccumulated = require("./forEachAccumulated");
-var invariant = require("./invariant");
-
-/**
- * Internal store for event listeners
- */
-var listenerBank = {};
-
-/**
- * Internal queue of events that have accumulated their dispatches and are
- * waiting to have their dispatches executed.
- */
-var eventQueue = null;
-
-/**
- * Dispatches an event and releases it back into the pool, unless persistent.
- *
- * @param {?object} event Synthetic event to be dispatched.
- * @private
- */
-var executeDispatchesAndRelease = function(event) {
-  if (event) {
-    var executeDispatch = EventPluginUtils.executeDispatch;
-    // Plugins can provide custom behavior when dispatching events.
-    var PluginModule = EventPluginRegistry.getPluginModuleForEvent(event);
-    if (PluginModule && PluginModule.executeDispatch) {
-      executeDispatch = PluginModule.executeDispatch;
-    }
-    EventPluginUtils.executeDispatchesInOrder(event, executeDispatch);
-
-    if (!event.isPersistent()) {
-      event.constructor.release(event);
-    }
-  }
-};
-
-/**
- * - `InstanceHandle`: [required] Module that performs logical traversals of DOM
- *   hierarchy given ids of the logical DOM elements involved.
- */
-var InstanceHandle = null;
-
-function validateInstanceHandle() {
-  var valid =
-    InstanceHandle &&
-    InstanceHandle.traverseTwoPhase &&
-    InstanceHandle.traverseEnterLeave;
-  ("production" !== process.env.NODE_ENV ? invariant(
-    valid,
-    'InstanceHandle not injected before use!'
-  ) : invariant(valid));
-}
-
-/**
- * This is a unified interface for event plugins to be installed and configured.
- *
- * Event plugins can implement the following properties:
- *
- *   `extractEvents` {function(string, DOMEventTarget, string, object): *}
- *     Required. When a top-level event is fired, this method is expected to
- *     extract synthetic events that will in turn be queued and dispatched.
- *
- *   `eventTypes` {object}
- *     Optional, plugins that fire events must publish a mapping of registration
- *     names that are used to register listeners. Values of this mapping must
- *     be objects that contain `registrationName` or `phasedRegistrationNames`.
- *
- *   `executeDispatch` {function(object, function, string)}
- *     Optional, allows plugins to override how an event gets dispatched. By
- *     default, the listener is simply invoked.
- *
- * Each plugin that is injected into `EventsPluginHub` is immediately operable.
- *
- * @public
- */
-var EventPluginHub = {
-
-  /**
-   * Methods for injecting dependencies.
-   */
-  injection: {
-
-    /**
-     * @param {object} InjectedMount
-     * @public
-     */
-    injectMount: EventPluginUtils.injection.injectMount,
-
-    /**
-     * @param {object} InjectedInstanceHandle
-     * @public
-     */
-    injectInstanceHandle: function(InjectedInstanceHandle) {
-      InstanceHandle = InjectedInstanceHandle;
-      if ("production" !== process.env.NODE_ENV) {
-        validateInstanceHandle();
-      }
-    },
-
-    getInstanceHandle: function() {
-      if ("production" !== process.env.NODE_ENV) {
-        validateInstanceHandle();
-      }
-      return InstanceHandle;
-    },
-
-    /**
-     * @param {array} InjectedEventPluginOrder
-     * @public
-     */
-    injectEventPluginOrder: EventPluginRegistry.injectEventPluginOrder,
-
-    /**
-     * @param {object} injectedNamesToPlugins Map from names to plugin modules.
-     */
-    injectEventPluginsByName: EventPluginRegistry.injectEventPluginsByName
-
-  },
-
-  eventNameDispatchConfigs: EventPluginRegistry.eventNameDispatchConfigs,
-
-  registrationNameModules: EventPluginRegistry.registrationNameModules,
-
-  /**
-   * Stores `listener` at `listenerBank[registrationName][id]`. Is idempotent.
-   *
-   * @param {string} id ID of the DOM element.
-   * @param {string} registrationName Name of listener (e.g. `onClick`).
-   * @param {?function} listener The callback to store.
-   */
-  putListener: function(id, registrationName, listener) {
-    ("production" !== process.env.NODE_ENV ? invariant(
-      !listener || typeof listener === 'function',
-      'Expected %s listener to be a function, instead got type %s',
-      registrationName, typeof listener
-    ) : invariant(!listener || typeof listener === 'function'));
-
-    var bankForRegistrationName =
-      listenerBank[registrationName] || (listenerBank[registrationName] = {});
-    bankForRegistrationName[id] = listener;
-  },
-
-  /**
-   * @param {string} id ID of the DOM element.
-   * @param {string} registrationName Name of listener (e.g. `onClick`).
-   * @return {?function} The stored callback.
-   */
-  getListener: function(id, registrationName) {
-    var bankForRegistrationName = listenerBank[registrationName];
-    return bankForRegistrationName && bankForRegistrationName[id];
-  },
-
-  /**
-   * Deletes a listener from the registration bank.
-   *
-   * @param {string} id ID of the DOM element.
-   * @param {string} registrationName Name of listener (e.g. `onClick`).
-   */
-  deleteListener: function(id, registrationName) {
-    var bankForRegistrationName = listenerBank[registrationName];
-    if (bankForRegistrationName) {
-      delete bankForRegistrationName[id];
-    }
-  },
-
-  /**
-   * Deletes all listeners for the DOM element with the supplied ID.
-   *
-   * @param {string} id ID of the DOM element.
-   */
-  deleteAllListeners: function(id) {
-    for (var registrationName in listenerBank) {
-      delete listenerBank[registrationName][id];
-    }
-  },
-
-  /**
-   * Allows registered plugins an opportunity to extract events from top-level
-   * native browser events.
-   *
-   * @param {string} topLevelType Record from `EventConstants`.
-   * @param {DOMEventTarget} topLevelTarget The listening component root node.
-   * @param {string} topLevelTargetID ID of `topLevelTarget`.
-   * @param {object} nativeEvent Native browser event.
-   * @return {*} An accumulation of synthetic events.
-   * @internal
-   */
-  extractEvents: function(
-      topLevelType,
-      topLevelTarget,
-      topLevelTargetID,
-      nativeEvent) {
-    var events;
-    var plugins = EventPluginRegistry.plugins;
-    for (var i = 0, l = plugins.length; i < l; i++) {
-      // Not every plugin in the ordering may be loaded at runtime.
-      var possiblePlugin = plugins[i];
-      if (possiblePlugin) {
-        var extractedEvents = possiblePlugin.extractEvents(
-          topLevelType,
-          topLevelTarget,
-          topLevelTargetID,
-          nativeEvent
-        );
-        if (extractedEvents) {
-          events = accumulateInto(events, extractedEvents);
-        }
-      }
-    }
-    return events;
-  },
-
-  /**
-   * Enqueues a synthetic event that should be dispatched when
-   * `processEventQueue` is invoked.
-   *
-   * @param {*} events An accumulation of synthetic events.
-   * @internal
-   */
-  enqueueEvents: function(events) {
-    if (events) {
-      eventQueue = accumulateInto(eventQueue, events);
-    }
-  },
-
-  /**
-   * Dispatches all synthetic events on the event queue.
-   *
-   * @internal
-   */
-  processEventQueue: function() {
-    // Set `eventQueue` to null before processing it so that we can tell if more
-    // events get enqueued while processing.
-    var processingEventQueue = eventQueue;
-    eventQueue = null;
-    forEachAccumulated(processingEventQueue, executeDispatchesAndRelease);
-    ("production" !== process.env.NODE_ENV ? invariant(
-      !eventQueue,
-      'processEventQueue(): Additional events were enqueued while processing ' +
-      'an event queue. Support for this has not yet been implemented.'
-    ) : invariant(!eventQueue));
-  },
-
-  /**
-   * These are needed for tests only. Do not use!
-   */
-  __purge: function() {
-    listenerBank = {};
-  },
-
-  __getListenerBank: function() {
-    return listenerBank;
-  }
-
-};
-
-module.exports = EventPluginHub;
-
-}).call(this,require('_process'))
-},{"./EventPluginRegistry":107,"./EventPluginUtils":108,"./accumulateInto":115,"./forEachAccumulated":117,"./invariant":119,"_process":28}],107:[function(require,module,exports){
-(function (process){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule EventPluginRegistry
- * @typechecks static-only
- */
-
-'use strict';
-
-var invariant = require("./invariant");
-
-/**
- * Injectable ordering of event plugins.
- */
-var EventPluginOrder = null;
-
-/**
- * Injectable mapping from names to event plugin modules.
- */
-var namesToPlugins = {};
-
-/**
- * Recomputes the plugin list using the injected plugins and plugin ordering.
- *
- * @private
- */
-function recomputePluginOrdering() {
-  if (!EventPluginOrder) {
-    // Wait until an `EventPluginOrder` is injected.
-    return;
-  }
-  for (var pluginName in namesToPlugins) {
-    var PluginModule = namesToPlugins[pluginName];
-    var pluginIndex = EventPluginOrder.indexOf(pluginName);
-    ("production" !== process.env.NODE_ENV ? invariant(
-      pluginIndex > -1,
-      'EventPluginRegistry: Cannot inject event plugins that do not exist in ' +
-      'the plugin ordering, `%s`.',
-      pluginName
-    ) : invariant(pluginIndex > -1));
-    if (EventPluginRegistry.plugins[pluginIndex]) {
-      continue;
-    }
-    ("production" !== process.env.NODE_ENV ? invariant(
-      PluginModule.extractEvents,
-      'EventPluginRegistry: Event plugins must implement an `extractEvents` ' +
-      'method, but `%s` does not.',
-      pluginName
-    ) : invariant(PluginModule.extractEvents));
-    EventPluginRegistry.plugins[pluginIndex] = PluginModule;
-    var publishedEvents = PluginModule.eventTypes;
-    for (var eventName in publishedEvents) {
-      ("production" !== process.env.NODE_ENV ? invariant(
-        publishEventForPlugin(
-          publishedEvents[eventName],
-          PluginModule,
-          eventName
-        ),
-        'EventPluginRegistry: Failed to publish event `%s` for plugin `%s`.',
-        eventName,
-        pluginName
-      ) : invariant(publishEventForPlugin(
-        publishedEvents[eventName],
-        PluginModule,
-        eventName
-      )));
-    }
-  }
-}
-
-/**
- * Publishes an event so that it can be dispatched by the supplied plugin.
- *
- * @param {object} dispatchConfig Dispatch configuration for the event.
- * @param {object} PluginModule Plugin publishing the event.
- * @return {boolean} True if the event was successfully published.
- * @private
- */
-function publishEventForPlugin(dispatchConfig, PluginModule, eventName) {
-  ("production" !== process.env.NODE_ENV ? invariant(
-    !EventPluginRegistry.eventNameDispatchConfigs.hasOwnProperty(eventName),
-    'EventPluginHub: More than one plugin attempted to publish the same ' +
-    'event name, `%s`.',
-    eventName
-  ) : invariant(!EventPluginRegistry.eventNameDispatchConfigs.hasOwnProperty(eventName)));
-  EventPluginRegistry.eventNameDispatchConfigs[eventName] = dispatchConfig;
-
-  var phasedRegistrationNames = dispatchConfig.phasedRegistrationNames;
-  if (phasedRegistrationNames) {
-    for (var phaseName in phasedRegistrationNames) {
-      if (phasedRegistrationNames.hasOwnProperty(phaseName)) {
-        var phasedRegistrationName = phasedRegistrationNames[phaseName];
-        publishRegistrationName(
-          phasedRegistrationName,
-          PluginModule,
-          eventName
-        );
-      }
-    }
-    return true;
-  } else if (dispatchConfig.registrationName) {
-    publishRegistrationName(
-      dispatchConfig.registrationName,
-      PluginModule,
-      eventName
-    );
-    return true;
-  }
-  return false;
-}
-
-/**
- * Publishes a registration name that is used to identify dispatched events and
- * can be used with `EventPluginHub.putListener` to register listeners.
- *
- * @param {string} registrationName Registration name to add.
- * @param {object} PluginModule Plugin publishing the event.
- * @private
- */
-function publishRegistrationName(registrationName, PluginModule, eventName) {
-  ("production" !== process.env.NODE_ENV ? invariant(
-    !EventPluginRegistry.registrationNameModules[registrationName],
-    'EventPluginHub: More than one plugin attempted to publish the same ' +
-    'registration name, `%s`.',
-    registrationName
-  ) : invariant(!EventPluginRegistry.registrationNameModules[registrationName]));
-  EventPluginRegistry.registrationNameModules[registrationName] = PluginModule;
-  EventPluginRegistry.registrationNameDependencies[registrationName] =
-    PluginModule.eventTypes[eventName].dependencies;
-}
-
-/**
- * Registers plugins so that they can extract and dispatch events.
- *
- * @see {EventPluginHub}
- */
-var EventPluginRegistry = {
-
-  /**
-   * Ordered list of injected plugins.
-   */
-  plugins: [],
-
-  /**
-   * Mapping from event name to dispatch config
-   */
-  eventNameDispatchConfigs: {},
-
-  /**
-   * Mapping from registration name to plugin module
-   */
-  registrationNameModules: {},
-
-  /**
-   * Mapping from registration name to event name
-   */
-  registrationNameDependencies: {},
-
-  /**
-   * Injects an ordering of plugins (by plugin name). This allows the ordering
-   * to be decoupled from injection of the actual plugins so that ordering is
-   * always deterministic regardless of packaging, on-the-fly injection, etc.
-   *
-   * @param {array} InjectedEventPluginOrder
-   * @internal
-   * @see {EventPluginHub.injection.injectEventPluginOrder}
-   */
-  injectEventPluginOrder: function(InjectedEventPluginOrder) {
-    ("production" !== process.env.NODE_ENV ? invariant(
-      !EventPluginOrder,
-      'EventPluginRegistry: Cannot inject event plugin ordering more than ' +
-      'once. You are likely trying to load more than one copy of React.'
-    ) : invariant(!EventPluginOrder));
-    // Clone the ordering so it cannot be dynamically mutated.
-    EventPluginOrder = Array.prototype.slice.call(InjectedEventPluginOrder);
-    recomputePluginOrdering();
-  },
-
-  /**
-   * Injects plugins to be used by `EventPluginHub`. The plugin names must be
-   * in the ordering injected by `injectEventPluginOrder`.
-   *
-   * Plugins can be injected as part of page initialization or on-the-fly.
-   *
-   * @param {object} injectedNamesToPlugins Map from names to plugin modules.
-   * @internal
-   * @see {EventPluginHub.injection.injectEventPluginsByName}
-   */
-  injectEventPluginsByName: function(injectedNamesToPlugins) {
-    var isOrderingDirty = false;
-    for (var pluginName in injectedNamesToPlugins) {
-      if (!injectedNamesToPlugins.hasOwnProperty(pluginName)) {
-        continue;
-      }
-      var PluginModule = injectedNamesToPlugins[pluginName];
-      if (!namesToPlugins.hasOwnProperty(pluginName) ||
-          namesToPlugins[pluginName] !== PluginModule) {
-        ("production" !== process.env.NODE_ENV ? invariant(
-          !namesToPlugins[pluginName],
-          'EventPluginRegistry: Cannot inject two different event plugins ' +
-          'using the same name, `%s`.',
-          pluginName
-        ) : invariant(!namesToPlugins[pluginName]));
-        namesToPlugins[pluginName] = PluginModule;
-        isOrderingDirty = true;
-      }
-    }
-    if (isOrderingDirty) {
-      recomputePluginOrdering();
-    }
-  },
-
-  /**
-   * Looks up the plugin for the supplied event.
-   *
-   * @param {object} event A synthetic event.
-   * @return {?object} The plugin that created the supplied event.
-   * @internal
-   */
-  getPluginModuleForEvent: function(event) {
-    var dispatchConfig = event.dispatchConfig;
-    if (dispatchConfig.registrationName) {
-      return EventPluginRegistry.registrationNameModules[
-        dispatchConfig.registrationName
-      ] || null;
-    }
-    for (var phase in dispatchConfig.phasedRegistrationNames) {
-      if (!dispatchConfig.phasedRegistrationNames.hasOwnProperty(phase)) {
-        continue;
-      }
-      var PluginModule = EventPluginRegistry.registrationNameModules[
-        dispatchConfig.phasedRegistrationNames[phase]
-      ];
-      if (PluginModule) {
-        return PluginModule;
-      }
-    }
-    return null;
-  },
-
-  /**
-   * Exposed for unit testing.
-   * @private
-   */
-  _resetEventPlugins: function() {
-    EventPluginOrder = null;
-    for (var pluginName in namesToPlugins) {
-      if (namesToPlugins.hasOwnProperty(pluginName)) {
-        delete namesToPlugins[pluginName];
-      }
-    }
-    EventPluginRegistry.plugins.length = 0;
-
-    var eventNameDispatchConfigs = EventPluginRegistry.eventNameDispatchConfigs;
-    for (var eventName in eventNameDispatchConfigs) {
-      if (eventNameDispatchConfigs.hasOwnProperty(eventName)) {
-        delete eventNameDispatchConfigs[eventName];
-      }
-    }
-
-    var registrationNameModules = EventPluginRegistry.registrationNameModules;
-    for (var registrationName in registrationNameModules) {
-      if (registrationNameModules.hasOwnProperty(registrationName)) {
-        delete registrationNameModules[registrationName];
-      }
-    }
-  }
-
-};
-
-module.exports = EventPluginRegistry;
-
-}).call(this,require('_process'))
-},{"./invariant":119,"_process":28}],108:[function(require,module,exports){
-(function (process){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule EventPluginUtils
- */
-
-'use strict';
-
-var EventConstants = require("./EventConstants");
-
-var invariant = require("./invariant");
-
-/**
- * Injected dependencies:
- */
-
-/**
- * - `Mount`: [required] Module that can convert between React dom IDs and
- *   actual node references.
- */
-var injection = {
-  Mount: null,
-  injectMount: function(InjectedMount) {
-    injection.Mount = InjectedMount;
-    if ("production" !== process.env.NODE_ENV) {
-      ("production" !== process.env.NODE_ENV ? invariant(
-        InjectedMount && InjectedMount.getNode,
-        'EventPluginUtils.injection.injectMount(...): Injected Mount module ' +
-        'is missing getNode.'
-      ) : invariant(InjectedMount && InjectedMount.getNode));
-    }
-  }
-};
-
-var topLevelTypes = EventConstants.topLevelTypes;
-
-function isEndish(topLevelType) {
-  return topLevelType === topLevelTypes.topMouseUp ||
-         topLevelType === topLevelTypes.topTouchEnd ||
-         topLevelType === topLevelTypes.topTouchCancel;
-}
-
-function isMoveish(topLevelType) {
-  return topLevelType === topLevelTypes.topMouseMove ||
-         topLevelType === topLevelTypes.topTouchMove;
-}
-function isStartish(topLevelType) {
-  return topLevelType === topLevelTypes.topMouseDown ||
-         topLevelType === topLevelTypes.topTouchStart;
-}
-
-
-var validateEventDispatches;
-if ("production" !== process.env.NODE_ENV) {
-  validateEventDispatches = function(event) {
-    var dispatchListeners = event._dispatchListeners;
-    var dispatchIDs = event._dispatchIDs;
-
-    var listenersIsArr = Array.isArray(dispatchListeners);
-    var idsIsArr = Array.isArray(dispatchIDs);
-    var IDsLen = idsIsArr ? dispatchIDs.length : dispatchIDs ? 1 : 0;
-    var listenersLen = listenersIsArr ?
-      dispatchListeners.length :
-      dispatchListeners ? 1 : 0;
-
-    ("production" !== process.env.NODE_ENV ? invariant(
-      idsIsArr === listenersIsArr && IDsLen === listenersLen,
-      'EventPluginUtils: Invalid `event`.'
-    ) : invariant(idsIsArr === listenersIsArr && IDsLen === listenersLen));
-  };
-}
-
-/**
- * Invokes `cb(event, listener, id)`. Avoids using call if no scope is
- * provided. The `(listener,id)` pair effectively forms the "dispatch" but are
- * kept separate to conserve memory.
- */
-function forEachEventDispatch(event, cb) {
-  var dispatchListeners = event._dispatchListeners;
-  var dispatchIDs = event._dispatchIDs;
-  if ("production" !== process.env.NODE_ENV) {
-    validateEventDispatches(event);
-  }
-  if (Array.isArray(dispatchListeners)) {
-    for (var i = 0; i < dispatchListeners.length; i++) {
-      if (event.isPropagationStopped()) {
-        break;
-      }
-      // Listeners and IDs are two parallel arrays that are always in sync.
-      cb(event, dispatchListeners[i], dispatchIDs[i]);
-    }
-  } else if (dispatchListeners) {
-    cb(event, dispatchListeners, dispatchIDs);
-  }
-}
-
-/**
- * Default implementation of PluginModule.executeDispatch().
- * @param {SyntheticEvent} SyntheticEvent to handle
- * @param {function} Application-level callback
- * @param {string} domID DOM id to pass to the callback.
- */
-function executeDispatch(event, listener, domID) {
-  event.currentTarget = injection.Mount.getNode(domID);
-  var returnValue = listener(event, domID);
-  event.currentTarget = null;
-  return returnValue;
-}
-
-/**
- * Standard/simple iteration through an event's collected dispatches.
- */
-function executeDispatchesInOrder(event, cb) {
-  forEachEventDispatch(event, cb);
-  event._dispatchListeners = null;
-  event._dispatchIDs = null;
-}
-
-/**
- * Standard/simple iteration through an event's collected dispatches, but stops
- * at the first dispatch execution returning true, and returns that id.
- *
- * @return id of the first dispatch execution who's listener returns true, or
- * null if no listener returned true.
- */
-function executeDispatchesInOrderStopAtTrueImpl(event) {
-  var dispatchListeners = event._dispatchListeners;
-  var dispatchIDs = event._dispatchIDs;
-  if ("production" !== process.env.NODE_ENV) {
-    validateEventDispatches(event);
-  }
-  if (Array.isArray(dispatchListeners)) {
-    for (var i = 0; i < dispatchListeners.length; i++) {
-      if (event.isPropagationStopped()) {
-        break;
-      }
-      // Listeners and IDs are two parallel arrays that are always in sync.
-      if (dispatchListeners[i](event, dispatchIDs[i])) {
-        return dispatchIDs[i];
-      }
-    }
-  } else if (dispatchListeners) {
-    if (dispatchListeners(event, dispatchIDs)) {
-      return dispatchIDs;
-    }
-  }
-  return null;
-}
-
-/**
- * @see executeDispatchesInOrderStopAtTrueImpl
- */
-function executeDispatchesInOrderStopAtTrue(event) {
-  var ret = executeDispatchesInOrderStopAtTrueImpl(event);
-  event._dispatchIDs = null;
-  event._dispatchListeners = null;
-  return ret;
-}
-
-/**
- * Execution of a "direct" dispatch - there must be at most one dispatch
- * accumulated on the event or it is considered an error. It doesn't really make
- * sense for an event with multiple dispatches (bubbled) to keep track of the
- * return values at each dispatch execution, but it does tend to make sense when
- * dealing with "direct" dispatches.
- *
- * @return The return value of executing the single dispatch.
- */
-function executeDirectDispatch(event) {
-  if ("production" !== process.env.NODE_ENV) {
-    validateEventDispatches(event);
-  }
-  var dispatchListener = event._dispatchListeners;
-  var dispatchID = event._dispatchIDs;
-  ("production" !== process.env.NODE_ENV ? invariant(
-    !Array.isArray(dispatchListener),
-    'executeDirectDispatch(...): Invalid `event`.'
-  ) : invariant(!Array.isArray(dispatchListener)));
-  var res = dispatchListener ?
-    dispatchListener(event, dispatchID) :
-    null;
-  event._dispatchListeners = null;
-  event._dispatchIDs = null;
-  return res;
-}
-
-/**
- * @param {SyntheticEvent} event
- * @return {bool} True iff number of dispatches accumulated is greater than 0.
- */
-function hasDispatches(event) {
-  return !!event._dispatchListeners;
-}
-
-/**
- * General utilities that are useful in creating custom Event Plugins.
- */
-var EventPluginUtils = {
-  isEndish: isEndish,
-  isMoveish: isMoveish,
-  isStartish: isStartish,
-
-  executeDirectDispatch: executeDirectDispatch,
-  executeDispatch: executeDispatch,
-  executeDispatchesInOrder: executeDispatchesInOrder,
-  executeDispatchesInOrderStopAtTrue: executeDispatchesInOrderStopAtTrue,
-  hasDispatches: hasDispatches,
-  injection: injection,
-  useTouchEvents: false
-};
-
-module.exports = EventPluginUtils;
-
-}).call(this,require('_process'))
-},{"./EventConstants":105,"./invariant":119,"_process":28}],109:[function(require,module,exports){
-(function (process){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule EventPropagators
- */
-
-'use strict';
-
-var EventConstants = require("./EventConstants");
-var EventPluginHub = require("./EventPluginHub");
-
-var accumulateInto = require("./accumulateInto");
-var forEachAccumulated = require("./forEachAccumulated");
-
-var PropagationPhases = EventConstants.PropagationPhases;
-var getListener = EventPluginHub.getListener;
-
-/**
- * Some event types have a notion of different registration names for different
- * "phases" of propagation. This finds listeners by a given phase.
- */
-function listenerAtPhase(id, event, propagationPhase) {
-  var registrationName =
-    event.dispatchConfig.phasedRegistrationNames[propagationPhase];
-  return getListener(id, registrationName);
-}
-
-/**
- * Tags a `SyntheticEvent` with dispatched listeners. Creating this function
- * here, allows us to not have to bind or create functions for each event.
- * Mutating the event's members allows us to not have to create a wrapping
- * "dispatch" object that pairs the event with the listener.
- */
-function accumulateDirectionalDispatches(domID, upwards, event) {
-  if ("production" !== process.env.NODE_ENV) {
-    if (!domID) {
-      throw new Error('Dispatching id must not be null');
-    }
-  }
-  var phase = upwards ? PropagationPhases.bubbled : PropagationPhases.captured;
-  var listener = listenerAtPhase(domID, event, phase);
-  if (listener) {
-    event._dispatchListeners =
-      accumulateInto(event._dispatchListeners, listener);
-    event._dispatchIDs = accumulateInto(event._dispatchIDs, domID);
-  }
-}
-
-/**
- * Collect dispatches (must be entirely collected before dispatching - see unit
- * tests). Lazily allocate the array to conserve memory.  We must loop through
- * each event and perform the traversal for each one. We can not perform a
- * single traversal for the entire collection of events because each event may
- * have a different target.
- */
-function accumulateTwoPhaseDispatchesSingle(event) {
-  if (event && event.dispatchConfig.phasedRegistrationNames) {
-    EventPluginHub.injection.getInstanceHandle().traverseTwoPhase(
-      event.dispatchMarker,
-      accumulateDirectionalDispatches,
-      event
-    );
-  }
-}
-
-
-/**
- * Accumulates without regard to direction, does not look for phased
- * registration names. Same as `accumulateDirectDispatchesSingle` but without
- * requiring that the `dispatchMarker` be the same as the dispatched ID.
- */
-function accumulateDispatches(id, ignoredDirection, event) {
-  if (event && event.dispatchConfig.registrationName) {
-    var registrationName = event.dispatchConfig.registrationName;
-    var listener = getListener(id, registrationName);
-    if (listener) {
-      event._dispatchListeners =
-        accumulateInto(event._dispatchListeners, listener);
-      event._dispatchIDs = accumulateInto(event._dispatchIDs, id);
-    }
-  }
-}
-
-/**
- * Accumulates dispatches on an `SyntheticEvent`, but only for the
- * `dispatchMarker`.
- * @param {SyntheticEvent} event
- */
-function accumulateDirectDispatchesSingle(event) {
-  if (event && event.dispatchConfig.registrationName) {
-    accumulateDispatches(event.dispatchMarker, null, event);
-  }
-}
-
-function accumulateTwoPhaseDispatches(events) {
-  forEachAccumulated(events, accumulateTwoPhaseDispatchesSingle);
-}
-
-function accumulateEnterLeaveDispatches(leave, enter, fromID, toID) {
-  EventPluginHub.injection.getInstanceHandle().traverseEnterLeave(
-    fromID,
-    toID,
-    accumulateDispatches,
-    leave,
-    enter
-  );
-}
-
-
-function accumulateDirectDispatches(events) {
-  forEachAccumulated(events, accumulateDirectDispatchesSingle);
-}
-
-
-
-/**
- * A small set of propagation patterns, each of which will accept a small amount
- * of information, and generate a set of "dispatch ready event objects" - which
- * are sets of events that have already been annotated with a set of dispatched
- * listener functions/ids. The API is designed this way to discourage these
- * propagation strategies from actually executing the dispatches, since we
- * always want to collect the entire set of dispatches before executing event a
- * single one.
- *
- * @constructor EventPropagators
- */
-var EventPropagators = {
-  accumulateTwoPhaseDispatches: accumulateTwoPhaseDispatches,
-  accumulateDirectDispatches: accumulateDirectDispatches,
-  accumulateEnterLeaveDispatches: accumulateEnterLeaveDispatches
-};
-
-module.exports = EventPropagators;
-
-}).call(this,require('_process'))
-},{"./EventConstants":105,"./EventPluginHub":106,"./accumulateInto":115,"./forEachAccumulated":117,"_process":28}],110:[function(require,module,exports){
-/**
- * Copyright 2014-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule Object.assign
- */
-
-// https://people.mozilla.org/~jorendorff/es6-draft.html#sec-object.assign
-
-'use strict';
-
-function assign(target, sources) {
-  if (target == null) {
-    throw new TypeError('Object.assign target cannot be null or undefined');
-  }
-
-  var to = Object(target);
-  var hasOwnProperty = Object.prototype.hasOwnProperty;
-
-  for (var nextIndex = 1; nextIndex < arguments.length; nextIndex++) {
-    var nextSource = arguments[nextIndex];
-    if (nextSource == null) {
-      continue;
-    }
-
-    var from = Object(nextSource);
-
-    // We don't currently support accessors nor proxies. Therefore this
-    // copy cannot throw. If we ever supported this then we must handle
-    // exceptions and side-effects. We don't support symbols so they won't
-    // be transferred.
-
-    for (var key in from) {
-      if (hasOwnProperty.call(from, key)) {
-        to[key] = from[key];
-      }
-    }
-  }
-
-  return to;
-}
-
-module.exports = assign;
-
-},{}],111:[function(require,module,exports){
-(function (process){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule PooledClass
- */
-
-'use strict';
-
-var invariant = require("./invariant");
-
-/**
- * Static poolers. Several custom versions for each potential number of
- * arguments. A completely generic pooler is easy to implement, but would
- * require accessing the `arguments` object. In each of these, `this` refers to
- * the Class itself, not an instance. If any others are needed, simply add them
- * here, or in their own files.
- */
-var oneArgumentPooler = function(copyFieldsFrom) {
-  var Klass = this;
-  if (Klass.instancePool.length) {
-    var instance = Klass.instancePool.pop();
-    Klass.call(instance, copyFieldsFrom);
-    return instance;
-  } else {
-    return new Klass(copyFieldsFrom);
-  }
-};
-
-var twoArgumentPooler = function(a1, a2) {
-  var Klass = this;
-  if (Klass.instancePool.length) {
-    var instance = Klass.instancePool.pop();
-    Klass.call(instance, a1, a2);
-    return instance;
-  } else {
-    return new Klass(a1, a2);
-  }
-};
-
-var threeArgumentPooler = function(a1, a2, a3) {
-  var Klass = this;
-  if (Klass.instancePool.length) {
-    var instance = Klass.instancePool.pop();
-    Klass.call(instance, a1, a2, a3);
-    return instance;
-  } else {
-    return new Klass(a1, a2, a3);
-  }
-};
-
-var fiveArgumentPooler = function(a1, a2, a3, a4, a5) {
-  var Klass = this;
-  if (Klass.instancePool.length) {
-    var instance = Klass.instancePool.pop();
-    Klass.call(instance, a1, a2, a3, a4, a5);
-    return instance;
-  } else {
-    return new Klass(a1, a2, a3, a4, a5);
-  }
-};
-
-var standardReleaser = function(instance) {
-  var Klass = this;
-  ("production" !== process.env.NODE_ENV ? invariant(
-    instance instanceof Klass,
-    'Trying to release an instance into a pool of a different type.'
-  ) : invariant(instance instanceof Klass));
-  if (instance.destructor) {
-    instance.destructor();
-  }
-  if (Klass.instancePool.length < Klass.poolSize) {
-    Klass.instancePool.push(instance);
-  }
-};
-
-var DEFAULT_POOL_SIZE = 10;
-var DEFAULT_POOLER = oneArgumentPooler;
-
-/**
- * Augments `CopyConstructor` to be a poolable class, augmenting only the class
- * itself (statically) not adding any prototypical fields. Any CopyConstructor
- * you give this may have a `poolSize` property, and will look for a
- * prototypical `destructor` on instances (optional).
- *
- * @param {Function} CopyConstructor Constructor that can be used to reset.
- * @param {Function} pooler Customizable pooler.
- */
-var addPoolingTo = function(CopyConstructor, pooler) {
-  var NewKlass = CopyConstructor;
-  NewKlass.instancePool = [];
-  NewKlass.getPooled = pooler || DEFAULT_POOLER;
-  if (!NewKlass.poolSize) {
-    NewKlass.poolSize = DEFAULT_POOL_SIZE;
-  }
-  NewKlass.release = standardReleaser;
-  return NewKlass;
-};
-
-var PooledClass = {
-  addPoolingTo: addPoolingTo,
-  oneArgumentPooler: oneArgumentPooler,
-  twoArgumentPooler: twoArgumentPooler,
-  threeArgumentPooler: threeArgumentPooler,
-  fiveArgumentPooler: fiveArgumentPooler
-};
-
-module.exports = PooledClass;
-
-}).call(this,require('_process'))
-},{"./invariant":119,"_process":28}],112:[function(require,module,exports){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule SyntheticEvent
- * @typechecks static-only
- */
-
-'use strict';
-
-var PooledClass = require("./PooledClass");
-
-var assign = require("./Object.assign");
-var emptyFunction = require("./emptyFunction");
-var getEventTarget = require("./getEventTarget");
-
-/**
- * @interface Event
- * @see http://www.w3.org/TR/DOM-Level-3-Events/
- */
-var EventInterface = {
-  type: null,
-  target: getEventTarget,
-  // currentTarget is set when dispatching; no use in copying it here
-  currentTarget: emptyFunction.thatReturnsNull,
-  eventPhase: null,
-  bubbles: null,
-  cancelable: null,
-  timeStamp: function(event) {
-    return event.timeStamp || Date.now();
-  },
-  defaultPrevented: null,
-  isTrusted: null
-};
-
-/**
- * Synthetic events are dispatched by event plugins, typically in response to a
- * top-level event delegation handler.
- *
- * These systems should generally use pooling to reduce the frequency of garbage
- * collection. The system should check `isPersistent` to determine whether the
- * event should be released into the pool after being dispatched. Users that
- * need a persisted event should invoke `persist`.
- *
- * Synthetic events (and subclasses) implement the DOM Level 3 Events API by
- * normalizing browser quirks. Subclasses do not necessarily have to implement a
- * DOM interface; custom application-specific events can also subclass this.
- *
- * @param {object} dispatchConfig Configuration used to dispatch this event.
- * @param {string} dispatchMarker Marker identifying the event target.
- * @param {object} nativeEvent Native browser event.
- */
-function SyntheticEvent(dispatchConfig, dispatchMarker, nativeEvent) {
-  this.dispatchConfig = dispatchConfig;
-  this.dispatchMarker = dispatchMarker;
-  this.nativeEvent = nativeEvent;
-
-  var Interface = this.constructor.Interface;
-  for (var propName in Interface) {
-    if (!Interface.hasOwnProperty(propName)) {
-      continue;
-    }
-    var normalize = Interface[propName];
-    if (normalize) {
-      this[propName] = normalize(nativeEvent);
-    } else {
-      this[propName] = nativeEvent[propName];
-    }
-  }
-
-  var defaultPrevented = nativeEvent.defaultPrevented != null ?
-    nativeEvent.defaultPrevented :
-    nativeEvent.returnValue === false;
-  if (defaultPrevented) {
-    this.isDefaultPrevented = emptyFunction.thatReturnsTrue;
-  } else {
-    this.isDefaultPrevented = emptyFunction.thatReturnsFalse;
-  }
-  this.isPropagationStopped = emptyFunction.thatReturnsFalse;
-}
-
-assign(SyntheticEvent.prototype, {
-
-  preventDefault: function() {
-    this.defaultPrevented = true;
-    var event = this.nativeEvent;
-    if (event.preventDefault) {
-      event.preventDefault();
-    } else {
-      event.returnValue = false;
-    }
-    this.isDefaultPrevented = emptyFunction.thatReturnsTrue;
-  },
-
-  stopPropagation: function() {
-    var event = this.nativeEvent;
-    if (event.stopPropagation) {
-      event.stopPropagation();
-    } else {
-      event.cancelBubble = true;
-    }
-    this.isPropagationStopped = emptyFunction.thatReturnsTrue;
-  },
-
-  /**
-   * We release all dispatched `SyntheticEvent`s after each event loop, adding
-   * them back into the pool. This allows a way to hold onto a reference that
-   * won't be added back into the pool.
-   */
-  persist: function() {
-    this.isPersistent = emptyFunction.thatReturnsTrue;
-  },
-
-  /**
-   * Checks if this event should be released back into the pool.
-   *
-   * @return {boolean} True if this should not be released, false otherwise.
-   */
-  isPersistent: emptyFunction.thatReturnsFalse,
-
-  /**
-   * `PooledClass` looks for `destructor` on each instance it releases.
-   */
-  destructor: function() {
-    var Interface = this.constructor.Interface;
-    for (var propName in Interface) {
-      this[propName] = null;
-    }
-    this.dispatchConfig = null;
-    this.dispatchMarker = null;
-    this.nativeEvent = null;
-  }
-
-});
-
-SyntheticEvent.Interface = EventInterface;
-
-/**
- * Helper to reduce boilerplate when creating subclasses.
- *
- * @param {function} Class
- * @param {?object} Interface
- */
-SyntheticEvent.augmentClass = function(Class, Interface) {
-  var Super = this;
-
-  var prototype = Object.create(Super.prototype);
-  assign(prototype, Class.prototype);
-  Class.prototype = prototype;
-  Class.prototype.constructor = Class;
-
-  Class.Interface = assign({}, Super.Interface, Interface);
-  Class.augmentClass = Super.augmentClass;
-
-  PooledClass.addPoolingTo(Class, PooledClass.threeArgumentPooler);
-};
-
-PooledClass.addPoolingTo(SyntheticEvent, PooledClass.threeArgumentPooler);
-
-module.exports = SyntheticEvent;
-
-},{"./Object.assign":110,"./PooledClass":111,"./emptyFunction":116,"./getEventTarget":118}],113:[function(require,module,exports){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule SyntheticUIEvent
- * @typechecks static-only
- */
-
-'use strict';
-
-var SyntheticEvent = require("./SyntheticEvent");
-
-var getEventTarget = require("./getEventTarget");
-
-/**
- * @interface UIEvent
- * @see http://www.w3.org/TR/DOM-Level-3-Events/
- */
-var UIEventInterface = {
-  view: function(event) {
-    if (event.view) {
-      return event.view;
-    }
-
-    var target = getEventTarget(event);
-    if (target != null && target.window === target) {
-      // target is a window object
-      return target;
-    }
-
-    var doc = target.ownerDocument;
-    // TODO: Figure out why `ownerDocument` is sometimes undefined in IE8.
-    if (doc) {
-      return doc.defaultView || doc.parentWindow;
-    } else {
-      return window;
-    }
-  },
-  detail: function(event) {
-    return event.detail || 0;
-  }
-};
-
-/**
- * @param {object} dispatchConfig Configuration used to dispatch this event.
- * @param {string} dispatchMarker Marker identifying the event target.
- * @param {object} nativeEvent Native browser event.
- * @extends {SyntheticEvent}
- */
-function SyntheticUIEvent(dispatchConfig, dispatchMarker, nativeEvent) {
-  SyntheticEvent.call(this, dispatchConfig, dispatchMarker, nativeEvent);
-}
-
-SyntheticEvent.augmentClass(SyntheticUIEvent, UIEventInterface);
-
-module.exports = SyntheticUIEvent;
-
-},{"./SyntheticEvent":112,"./getEventTarget":118}],114:[function(require,module,exports){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule ViewportMetrics
- */
-
-'use strict';
-
-var ViewportMetrics = {
-
-  currentScrollLeft: 0,
-
-  currentScrollTop: 0,
-
-  refreshScrollValues: function(scrollPosition) {
-    ViewportMetrics.currentScrollLeft = scrollPosition.x;
-    ViewportMetrics.currentScrollTop = scrollPosition.y;
-  }
-
-};
-
-module.exports = ViewportMetrics;
-
-},{}],115:[function(require,module,exports){
-(function (process){
-/**
- * Copyright 2014-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule accumulateInto
- */
-
-'use strict';
-
-var invariant = require("./invariant");
-
-/**
- *
- * Accumulates items that must not be null or undefined into the first one. This
- * is used to conserve memory by avoiding array allocations, and thus sacrifices
- * API cleanness. Since `current` can be null before being passed in and not
- * null after this function, make sure to assign it back to `current`:
- *
- * `a = accumulateInto(a, b);`
- *
- * This API should be sparingly used. Try `accumulate` for something cleaner.
- *
- * @return {*|array<*>} An accumulation of items.
- */
-
-function accumulateInto(current, next) {
-  ("production" !== process.env.NODE_ENV ? invariant(
-    next != null,
-    'accumulateInto(...): Accumulated items must not be null or undefined.'
-  ) : invariant(next != null));
-  if (current == null) {
-    return next;
-  }
-
-  // Both are not empty. Warning: Never call x.concat(y) when you are not
-  // certain that x is an Array (x could be a string with concat method).
-  var currentIsArray = Array.isArray(current);
-  var nextIsArray = Array.isArray(next);
-
-  if (currentIsArray && nextIsArray) {
-    current.push.apply(current, next);
-    return current;
-  }
-
-  if (currentIsArray) {
-    current.push(next);
-    return current;
-  }
-
-  if (nextIsArray) {
-    // A bit too dangerous to mutate `next`.
-    return [current].concat(next);
-  }
-
-  return [current, next];
-}
-
-module.exports = accumulateInto;
-
-}).call(this,require('_process'))
-},{"./invariant":119,"_process":28}],116:[function(require,module,exports){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule emptyFunction
- */
-
-function makeEmptyFunction(arg) {
-  return function() {
-    return arg;
-  };
-}
-
-/**
- * This function accepts and discards inputs; it has no side effects. This is
- * primarily useful idiomatically for overridable function endpoints which
- * always need to be callable, since JS lacks a null-call idiom ala Cocoa.
- */
-function emptyFunction() {}
-
-emptyFunction.thatReturns = makeEmptyFunction;
-emptyFunction.thatReturnsFalse = makeEmptyFunction(false);
-emptyFunction.thatReturnsTrue = makeEmptyFunction(true);
-emptyFunction.thatReturnsNull = makeEmptyFunction(null);
-emptyFunction.thatReturnsThis = function() { return this; };
-emptyFunction.thatReturnsArgument = function(arg) { return arg; };
-
-module.exports = emptyFunction;
-
-},{}],117:[function(require,module,exports){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule forEachAccumulated
- */
-
-'use strict';
-
-/**
- * @param {array} an "accumulation" of items which is either an Array or
- * a single item. Useful when paired with the `accumulate` module. This is a
- * simple utility that allows us to reason about a collection of items, but
- * handling the case when there is exactly one item (and we do not need to
- * allocate an array).
- */
-var forEachAccumulated = function(arr, cb, scope) {
-  if (Array.isArray(arr)) {
-    arr.forEach(cb, scope);
-  } else if (arr) {
-    cb.call(scope, arr);
-  }
-};
-
-module.exports = forEachAccumulated;
-
-},{}],118:[function(require,module,exports){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule getEventTarget
- * @typechecks static-only
- */
-
-'use strict';
-
-/**
- * Gets the target node from a native browser event by accounting for
- * inconsistencies in browser DOM APIs.
- *
- * @param {object} nativeEvent Native browser event.
- * @return {DOMEventTarget} Target node.
- */
-function getEventTarget(nativeEvent) {
-  var target = nativeEvent.target || nativeEvent.srcElement || window;
-  // Safari may fire events on text nodes (Node.TEXT_NODE is 3).
-  // @see http://www.quirksmode.org/js/events_properties.html
-  return target.nodeType === 3 ? target.parentNode : target;
-}
-
-module.exports = getEventTarget;
-
-},{}],119:[function(require,module,exports){
-(function (process){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule invariant
- */
-
-"use strict";
-
-/**
- * Use invariant() to assert state which your program assumes to be true.
- *
- * Provide sprintf-style format (only %s is supported) and arguments
- * to provide information about what broke and what you were
- * expecting.
- *
- * The invariant message will be stripped in production, but the invariant
- * will remain to ensure logic does not differ in production.
- */
-
-var invariant = function(condition, format, a, b, c, d, e, f) {
-  if ("production" !== process.env.NODE_ENV) {
-    if (format === undefined) {
-      throw new Error('invariant requires an error message argument');
-    }
-  }
-
-  if (!condition) {
-    var error;
-    if (format === undefined) {
-      error = new Error(
-        'Minified exception occurred; use the non-minified dev environment ' +
-        'for the full error message and additional helpful warnings.'
-      );
-    } else {
-      var args = [a, b, c, d, e, f];
-      var argIndex = 0;
-      error = new Error(
-        'Invariant Violation: ' +
-        format.replace(/%s/g, function() { return args[argIndex++]; })
-      );
-    }
-
-    error.framesToPop = 1; // we don't care about invariant's own frame
-    throw error;
-  }
-};
-
-module.exports = invariant;
-
-}).call(this,require('_process'))
-},{"_process":28}],120:[function(require,module,exports){
-(function (process){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule keyMirror
- * @typechecks static-only
- */
-
-'use strict';
-
-var invariant = require("./invariant");
-
-/**
- * Constructs an enumeration with keys equal to their value.
- *
- * For example:
- *
- *   var COLORS = keyMirror({blue: null, red: null});
- *   var myColor = COLORS.blue;
- *   var isColorValid = !!COLORS[myColor];
- *
- * The last line could not be performed if the values of the generated enum were
- * not equal to their keys.
- *
- *   Input:  {key1: val1, key2: val2}
- *   Output: {key1: key1, key2: key2}
- *
- * @param {object} obj
- * @return {object}
- */
-var keyMirror = function(obj) {
-  var ret = {};
-  var key;
-  ("production" !== process.env.NODE_ENV ? invariant(
-    obj instanceof Object && !Array.isArray(obj),
-    'keyMirror(...): Argument must be an object.'
-  ) : invariant(obj instanceof Object && !Array.isArray(obj)));
-  for (key in obj) {
-    if (!obj.hasOwnProperty(key)) {
-      continue;
-    }
-    ret[key] = key;
-  }
-  return ret;
-};
-
-module.exports = keyMirror;
-
-}).call(this,require('_process'))
-},{"./invariant":119,"_process":28}],121:[function(require,module,exports){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule keyOf
- */
-
-/**
- * Allows extraction of a minified key. Let's the build system minify keys
- * without loosing the ability to dynamically use key strings as values
- * themselves. Pass in an object with a single key/val pair and it will return
- * you the string key of that single record. Suppose you want to grab the
- * value for a key 'className' inside of an object. Key/val minification may
- * have aliased that key to be 'xa12'. keyOf({className: null}) will return
- * 'xa12' in that case. Resolve keys you want to use once at startup time, then
- * reuse those resolutions.
- */
-var keyOf = function(oneKeyObj) {
-  var key;
-  for (key in oneKeyObj) {
-    if (!oneKeyObj.hasOwnProperty(key)) {
-      continue;
-    }
-    return key;
-  }
-  return null;
-};
-
-
-module.exports = keyOf;
-
-},{}],122:[function(require,module,exports){
+},{"react":"react"}],104:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -18768,7 +20465,7 @@ request.put = function(url, data, fn){
 
 module.exports = request;
 
-},{"emitter":123,"reduce":124}],123:[function(require,module,exports){
+},{"emitter":105,"reduce":106}],105:[function(require,module,exports){
 
 /**
  * Expose `Emitter`.
@@ -18934,7 +20631,7 @@ Emitter.prototype.hasListeners = function(event){
   return !! this.listeners(event).length;
 };
 
-},{}],124:[function(require,module,exports){
+},{}],106:[function(require,module,exports){
 
 /**
  * Reduce `arr` with `fn`.
@@ -18959,4 +20656,4 @@ module.exports = function(arr, fn, initial){
   
   return curr;
 };
-},{}]},{},[26]);
+},{}]},{},[29]);

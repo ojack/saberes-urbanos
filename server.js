@@ -52,7 +52,7 @@ app.use('/api', api);
  * Adds new sitio to the database.
  */
  
-
+console.log("loading router");
 //React Routing for client side rendering, Isomorphic
 app.use(function(req, res) {
   Router.run(routes, req.path, function(Handler) {
@@ -62,21 +62,22 @@ app.use(function(req, res) {
   });
 });
 
+console.log("loading server");
 //Socket.io
 var server = require('http').createServer(app);
-var io = require('socket.io')(server);
-var onlineUsers = 0;
+// var io = require('socket.io')(server);
+// var onlineUsers = 0;
 
-io.sockets.on('connection', function(socket) {
-  onlineUsers++;
+// io.sockets.on('connection', function(socket) {
+//   onlineUsers++;
 
-  io.sockets.emit('onlineUsers', { onlineUsers: onlineUsers });
+//   io.sockets.emit('onlineUsers', { onlineUsers: onlineUsers });
 
-  socket.on('disconnect', function() {
-    onlineUsers--;
-    io.sockets.emit('onlineUsers', { onlineUsers: onlineUsers });
-  });
-});
+//   socket.on('disconnect', function() {
+//     onlineUsers--;
+//     io.sockets.emit('onlineUsers', { onlineUsers: onlineUsers });
+//   });
+// });
 
 server.listen(app.get('port'), function() {
   console.log('Express server listening on port ' + app.get('port'));

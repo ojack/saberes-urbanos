@@ -16,7 +16,10 @@ getInitialState(){
 	var sw = new mapboxgl.LngLat(-74.16126694164626, 4.5155410235603455);
 	var ne = new mapboxgl.LngLat( -73.91643370363467, 4.838602784913988);
 	var bounds = new mapboxgl.LngLatBounds(sw, ne);
-		return ({bounds: bounds});
+		return ({bounds: bounds, mapLoaded: false});
+},
+showElements(){
+	this.setState({mapLoaded: true});
 },
 	setBounds(bbox){
 		var ne = new mapboxgl.LngLat(bbox[0], bbox[1]);
@@ -25,10 +28,15 @@ getInitialState(){
 		this.setState({bounds: bounds});
 	},
   render() {
+  	var mapElements = [];
+  	if(this.state.mapLoaded){
+  		//mapElements.push(<HexGrid/>);
+  		mapElements.push(<Navigation setBounds={this.setBounds}/>);
+  	}
   	  return(<div>
-  	  			<BaseMap bounds={this.state.bounds}/>
-  	  			<HexGrid/>
-  	  			<Navigation setBounds={this.setBounds}/>
+  	  			<BaseMap bounds={this.state.bounds} onMapLoaded={this.showElements}/>
+  	  			{mapElements}
+  	  			
   	  		</div>)
    	}
   

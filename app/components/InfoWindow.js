@@ -1,5 +1,5 @@
 import React from 'react';
-
+import SvgHex from './SvgHex';
 
 var InfoWindow = React.createClass({
 
@@ -28,15 +28,15 @@ var InfoWindow = React.createClass({
   	};
   	var element = [
   	];
-  	console.log(this.props.info);
+  	console.log(this.props);
   	  return(<div style={container_style}>
-  	  			<h3 style={header_style}> EDIFICIO </h3>
+  	  			<h3 style={header_style}> {this.props.info.categoria} </h3>
   	  			<h5 style={respuesta_style}> {this.props.info.respuesta} </h5>
   	  			<h5 style={element_style}> LOCALIDAD / {this.props.info.localidad} </h5>
   	  			<h5 style={element_style}> BARRIO / {this.props.info.barrio} </h5>
   	  			<h5 style={element_style}> DIRECCIÓN / {this.props.info.direccion} </h5>
   	  			<h5 style={element_style}> TEMPORALIDAD / {this.props.info.temporalidad} </h5>
-  	  		</div>)
+          </div>)
    	}
   
 });
