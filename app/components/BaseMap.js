@@ -7,6 +7,13 @@ import InfoDetail from './InfoDetail'
 import SvgHex from './SvgHex'
 import AudioContextManager from './AudioContextManager'
 
+function drawHex(ctx, coords, rad){
+		ctx.fillStyle = "#FF3366";
+			//console.log(obj.properties.screenCoords.x);
+		ctx.fillRect(Math.floor(coords.x)-rad/2, Math.floor(coords.y)-rad/2,rad, rad);
+
+}
+
 var BaseMap = React.createClass({
 	getInitialState(){
 		return({coords: {
@@ -54,9 +61,8 @@ var BaseMap = React.createClass({
 			if(this.state.selected != null && obj.properties.tempId == this.state.selected.tempId){
 				size = 20;
 			}
-			this.ctx.fillStyle = "#FF3366";
-			//console.log(obj.properties.screenCoords.x);
-			this.ctx.fillRect(Math.floor(obj.properties.screenCoords.x)-size/2, Math.floor(obj.properties.screenCoords.y)-size/2,size, size);
+			drawHex(this.ctx, obj.properties.screenCoords, size);
+		
 			//this.ctx.fillRect(i*10, i*10,8, 8);
 			//this.ctx.fillRect(100,100, 8, 8);
 		}

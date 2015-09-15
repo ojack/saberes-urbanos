@@ -619,6 +619,12 @@ var _AudioContextManager = require('./AudioContextManager');
 
 var _AudioContextManager2 = _interopRequireDefault(_AudioContextManager);
 
+function drawHex(ctx, coords, rad) {
+	ctx.fillStyle = "#FF3366";
+	//console.log(obj.properties.screenCoords.x);
+	ctx.fillRect(Math.floor(coords.x) - rad / 2, Math.floor(coords.y) - rad / 2, rad, rad);
+}
+
 var BaseMap = _react2['default'].createClass({
 	displayName: 'BaseMap',
 
@@ -668,9 +674,8 @@ var BaseMap = _react2['default'].createClass({
 			if (this.state.selected != null && obj.properties.tempId == this.state.selected.tempId) {
 				size = 20;
 			}
-			this.ctx.fillStyle = "#FF3366";
-			//console.log(obj.properties.screenCoords.x);
-			this.ctx.fillRect(Math.floor(obj.properties.screenCoords.x) - size / 2, Math.floor(obj.properties.screenCoords.y) - size / 2, size, size);
+			drawHex(this.ctx, obj.properties.screenCoords, size);
+
 			//this.ctx.fillRect(i*10, i*10,8, 8);
 			//this.ctx.fillRect(100,100, 8, 8);
 		}
@@ -1659,32 +1664,110 @@ var _react2 = _interopRequireDefault(_react);
 var Intro = _react2["default"].createClass({
 	displayName: "Intro",
 
+	getInitialState: function getInitialState() {
+		return { showVideo: false };
+	},
+	showVideo: function showVideo() {
+		this.setState({ showVideo: true });
+	},
+	componentDidMount: function componentDidMount() {
+		var vid = document.getElementById("vid");
+		vid.onended = (function () {
+			//alert("video ended");
+			this.props.nextStep();
+		}).bind(this);
+	},
+
 	render: function render() {
+		var videoStyle = {
+			position: "fixed",
+			top: "0px",
+			left: "0px",
+			width: "100%",
+			height: "100%"
+		};
+		var closeButton = {};
+		if (this.state.showVideo) {
+			videoStyle.zIndex = 100;
+			var closeStyle = {
+				position: "fixed",
+				top: "0px",
+				right: "0px",
+				zIndex: 101,
+				fontSize: 28,
+				fontWeight: "bold"
+			};
+			closeButton = _react2["default"].createElement(
+				"div",
+				{ style: closeStyle, onClick: this.props.nextStep },
+				" X "
+			);
+		}
+
+		var headerStyle = {
+			position: "fixed",
+			top: "0px",
+			left: "0px",
+			width: "100%",
+			padding: "31px"
+		};
+
+		var shadeStyle = {
+			width: "100%",
+			height: "100%",
+			position: "fixed",
+			top: "0px",
+			left: "0px",
+			backgroundColor: "rgba(0, 0, 0, 0.6)"
+		};
+
+		var introStyle = {
+			textAlign: "center",
+			height: "100%",
+			maxWidth: "750px"
+		};
+
+		var playButtonStyle = {
+			cursor: "pointer",
+			marginTop: "20px"
+		};
+
 		return _react2["default"].createElement(
 			"div",
-			{ onMouseDown: this.props.nextStep },
+			null,
+			_react2["default"].createElement(
+				"video",
+				{ id: "vid", style: videoStyle, autoPlay: true },
+				_react2["default"].createElement("source", { src: "./video/enterprise-loop.mp4", type: "video/mp4" }),
+				"Your browser does not support the video tag."
+			),
+			closeButton,
+			_react2["default"].createElement("div", { style: shadeStyle }),
 			_react2["default"].createElement(
 				"div",
-				{ className: "header" },
+				{ className: "header", style: headerStyle },
 				_react2["default"].createElement("img", { src: "./img/logo-complete-01.png" })
 			),
 			_react2["default"].createElement(
 				"div",
-				{ className: "container" },
+				{ className: "container", style: introStyle },
 				_react2["default"].createElement(
 					"div",
-					{ className: "row intro-container" },
+					{ className: "row vertical-center" },
 					_react2["default"].createElement(
 						"h4",
 						{ className: "intro-text" },
-						"El Observatorio de Saberes Bogotanos ",
-						_react2["default"].createElement("br", null),
-						" toma vida gracias a usted, a su amor y a sus experiencias vividas como habitante de la ciudad."
+						"El Observatorio de Saberes Bogotanos toma vida gracias a usted, a su amor y a sus experiencias vividas como habitante de la ciudad."
 					),
 					_react2["default"].createElement(
 						"button",
-						{ className: "button-large" },
+						{ className: "button-large", onMouseDown: this.props.nextStep },
 						"Entrar"
+					),
+					_react2["default"].createElement(
+						"div",
+						{ style: playButtonStyle, onClick: this.showVideo },
+						_react2["default"].createElement("img", { src: "./img/play-button.png" })
 					)
 				)
 			)

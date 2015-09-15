@@ -960,17 +960,17 @@ body {
   padding: 0px;
   /*font-family: monospace;*/
 }
-.header {
-  width: 100%;
-  padding: 31px;
-}
-.intro-container {
-  text-align: center;
+.vertical-center {
+  position: relative;
+  top: 50%;
+  -webkit-transform: translateY(-50%);
+  -ms-transform: translateY(-50%);
+  transform: translateY(-50%);
 }
 h4 {
   font-family: 'nexa_lightregular', Arial, sans-serif;
   font-size: 30px;
-  font-weight: normal;
+  font-weight: 100;
 }
 button.button-large {
   font-family: 'nexa_boldregular', Arial, sans-serif;

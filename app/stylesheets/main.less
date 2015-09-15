@@ -50,6 +50,15 @@
   -o-transition:      @transition;  
 }
 
+.verticalalign(){
+  position: relative;
+  top: 50%;
+
+  -webkit-transform: translateY(-50%);
+  -ms-transform: translateY(-50%);
+  transform: translateY(-50%);
+}
+
 html,
 body {
   background-color: #fff;
@@ -62,20 +71,16 @@ body {
   /*font-family: monospace;*/
 }
 
-.header {
-  width: 100%;
-  padding: 31px;
+.vertical-center{
+  .verticalalign()
 }
 
-.intro-container{
-  text-align: center;
-}
 
 h4 {
   font-family:   @default-font;
   font-size: 30px;
  // text-align: center;
-  font-weight: normal;
+  font-weight: 100;
 }
 
 button.button-large {
