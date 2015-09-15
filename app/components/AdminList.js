@@ -1,63 +1,40 @@
 import React from 'react';
 import request from 'superagent';
-import FixedDataTable from 'fixed-data-table';
+import ListEntry from './ListEntry';
+import AddSite from './AddSite'
 
-var Table = FixedDataTable.Table;
-var Column = FixedDataTable.Column;
 
-var data = {
-	respuesta: null,
-	porque: null,
-	existente: false,
-	localidad: null,
-	barrio: null, 
-	direccion: null, 
-	coords: {
-         lat: 4.597,
-         lng: -74.09
-     }, 
-	foto: null,
-	sonido: null, 
-	videoUrl: null,
-	visible: false
-};
-
-var rows = [
-  ['a1', 'b1', 'c1'],
-  ['a2', 'b2', 'c2'],
-  ['a3', 'b3', 'c3'],
-  // .... and more
-];
-
-function rowGetter(rowIndex) {
-  return rows[rowIndex];
-}
-
-function editButton(id){
-	return <button id={id} onClick={handleClick}>Edit </button>;
-}
-
-function handleClick(e){
-	console.log(e.target);
-}
-
-function renderCell(cellData){
-	if(typeof(cellData)=='boolean'){
-		return <div><input type="checkbox" defaultValue={cellData}/> </div>
-	} else {
-		return <div> {cellData} </div>
-	}
-}
 
 var AdminList = React.createClass({
 	getInitialState(){
 		//create array 
-		var colArray = [];
-		for(var field in this.props.data){
-			colArray.push(field);
+		
+		return {sitios: [], selected: null}
+	},
+	onEdit(info){
+		console.log("edit");
+		console.log(info);
+		this.setState({selected: info});
+	},
+	onDelete(info, index){
+		console.log("edit");
+		console.log(info);
+		var r = confirm("Eliminar?");
+		console.log(index);
+		if(r){
+		 request
+		   .del('/api/sitio')
+		   .query({ id: info._id })
+		   .end(function(err, res){
+		   		console.log(res);
+		   		var sitios = this.state.sitios;
+		   		console.log(sitios);
+		   		sitios.splice(index, 1);
+		   		console.log(sitios);
+		   		this.setState({sitios: sitios});
+		   		//this.setState({sitios: res.body});
+		   }.bind(this));
 		}
-		console.log(colArray);
-		return {sitios: [], columns: colArray}
 	},
 	componentDidMount(){
 		 request
@@ -83,29 +60,25 @@ var AdminList = React.createClass({
 		console.log(e);
 	},
   render() {
-  	var cols = this.state.columns.map(function(field, index){
-  		return  (<Column
-	      label={field.toUpperCase()}
-	      cellRenderer={renderCell}
-	      width={80}
-	      dataKey={index}
-   		 />)
+  	var header =["respuesta", "existente", "categoria", "localidad", "barrio", "foto", "sonido", "visible"];
+  	var headerRender = header.map(function(title){
+  		return <td>{title}</td>;
   	});
+  	console.log(this.state.sitios);
+  	var listRender = this.state.sitios.map(function(object, index){
+  		//console.log(object);
+  		var coords = {lat: object.geometry.coordinates[1], lng: object.geometry.coordinates[0]}
+  		object.properties.coords = coords; 
+		return <ListEntry index={index} data = {object} onEdit={this.onEdit} onDelete={this.onDelete}/>
+  	}.bind(this));
+  	if(this.state.selected!=null){
+  		return <AddSite data={this.state.selected.properties} id={this.state.selected._id}/>
+  	}
     return (
-     <Table
-    rowHeight={50}
-    rowGetter={this.getItem}
-    rowsCount={this.state.sitios.length}
-    width={1000}
-    height={1000}
-    headerHeight={50}>
-   {cols}
-   <Column
-	      label={""}
-	      cellRenderer={editButton}
-	      width={80}
-   		 />
-  </Table>
+    	<table>
+    		<th>{headerRender}</th>
+    		{listRender}
+    	</table>
     );
   }
 });

@@ -18,15 +18,22 @@ function upload_file(file, signed_request, url, callback){
 
 var ConfirmSubmit = React.createClass({
   getInitialState(){
+
     return ({confirmationState: "form", statusMessage: [], numCallbacks: 0});
   },
   handleSubmit(e){
   	e.preventDefault(); // maybe remove this when more figured out
-  	console.log(this.props.submitData);
+  	
   	
   		var numCallbacks = 1; // hacky way to know when all callbacks have terminated
+      var url = "/api/add-sitio";
+      if(this.props.submitData.id && this.props.submitData.id != null){
+        url = "/api/update-sitio";
+      }
+      
+      console.log(url);
 	  	 var r = request
-	           .post('/api/add-sitio')
+	           .post(url)
 	           .send(this.props.submitData);
              if(this.props.submitData.foto && this.props.submitData.foto != null){
               numCallbacks++;
@@ -42,8 +49,6 @@ var ConfirmSubmit = React.createClass({
               }
               this.setState({confirmationState: "loading", statusMessage: ["adding to database"]});
 	           this.setState({numCallbacks: numCallbacks});
-             // .query({ file_name: file.name })
-	           // .query({ file_type: file.type })
 	           r.end(function(err, res){
                 this.setState({numCallbacks: this.state.numCallbacks-1});
               console.log(res);
@@ -106,6 +111,8 @@ var ConfirmSubmit = React.createClass({
        
   },
   render() {
+    console.log(" data is ");
+    console.log(this.props.submitData);
       var style = {
         position: "fixed",
         top: "0px",

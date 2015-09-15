@@ -68,7 +68,7 @@ import Dropdown from './Dropdown'
      }.bind(this));
       return (
         <div className={className}>
-          <label>{this.props.label}</label>
+          <label>{this.props.label+ ": "+ this.getValue()}</label>
           {dropdowns}
         </div>
       );
