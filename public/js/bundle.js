@@ -620,9 +620,15 @@ var _AudioContextManager = require('./AudioContextManager');
 var _AudioContextManager2 = _interopRequireDefault(_AudioContextManager);
 
 function drawHex(ctx, coords, rad) {
-	ctx.fillStyle = "#FF3366";
-	//console.log(obj.properties.screenCoords.x);
-	ctx.fillRect(Math.floor(coords.x) - rad / 2, Math.floor(coords.y) - rad / 2, rad, rad);
+
+	var angle;
+	for (var i = 0; i <= 6; i++) {
+		angle = i * 2 * Math.PI / 6;
+
+		ctx.lineTo(coords.x + rad * Math.cos(angle), coords.y + rad * Math.sin(angle));
+	}
+
+	//ctx.fillRect(Math.floor(coords.x)-rad/2, Math.floor(coords.y)-rad/2,rad, rad);
 }
 
 var BaseMap = _react2['default'].createClass({
@@ -664,17 +670,50 @@ var BaseMap = _react2['default'].createClass({
 	},
 	renderCanvas: function renderCanvas() {
 		this.ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+		var rad = 10;
+		var outerRad;
 		for (var i = 0; i < this.state.sitios.length; i++) {
 			var obj = this.state.sitios[i];
-			var size = 10;
-			if (this.state.sitios[i].properties.hasSound) {
-				size = 3 + this.audioContext.getVolume(i) * 0.8;
-			}
+			outerRad = rad + 3;
+			var vol = 0;
 
 			if (this.state.selected != null && obj.properties.tempId == this.state.selected.tempId) {
-				size = 20;
+				// = 20;
 			}
-			drawHex(this.ctx, obj.properties.screenCoords, size);
+			this.ctx.fillStyle = "#FF3366";
+			this.ctx.beginPath();
+			drawHex(this.ctx, obj.properties.screenCoords, rad);
+			this.ctx.closePath();
+			this.ctx.fill();
+			if (this.state.sitios[i].properties.hasSound) {
+				vol = this.audioContext.getVolume(i);
+				//console.log(vol);
+				outerRad = outerRad + vol;
+				var opacity = 0.7 * (1 - vol / 100);
+				this.ctx.strokeStyle = "rgba(255, 51, 102, " + opacity + ")";
+				//this.ctx.strokeStyle = "#FF3366";
+				this.ctx.beginPath();
+				drawHex(this.ctx, obj.properties.screenCoords, outerRad);
+				this.ctx.closePath();
+				this.ctx.stroke();
+
+				this.ctx.beginPath();
+				drawHex(this.ctx, obj.properties.screenCoords, outerRad - vol / 3);
+				this.ctx.closePath();
+				this.ctx.stroke();
+				this.ctx.beginPath();
+				drawHex(this.ctx, obj.properties.screenCoords, outerRad - vol * 2 / 3);
+				this.ctx.closePath();
+				this.ctx.stroke();
+			} else {
+				var opacity = 0.5 * (1 - vol / 100);
+				this.ctx.strokeStyle = "rgba(255, 51, 102, " + opacity + ")";
+				//this.ctx.strokeStyle = "#FF3366";
+				this.ctx.beginPath();
+				drawHex(this.ctx, obj.properties.screenCoords, outerRad);
+				this.ctx.closePath();
+				this.ctx.stroke();
+			}
 
 			//this.ctx.fillRect(i*10, i*10,8, 8);
 			//this.ctx.fillRect(100,100, 8, 8);
@@ -714,7 +753,7 @@ var BaseMap = _react2['default'].createClass({
 					"text-optional": true
 				},
 				"paint": {
-					//	"icon-opacity": 0.05
+					"icon-opacity": 0.05,
 					"text-size": 18,
 					"text-color": "#f36"
 				}
