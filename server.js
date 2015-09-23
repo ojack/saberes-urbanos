@@ -4,6 +4,7 @@ var path = require('path');
 var logger = require('morgan');
 var api = require('./routes/api.js'); //express router for handling api requests
 var bodyParser = require('body-parser');
+var cookieParser = require('cookie-parser');
 var swig  = require('swig');
 var React = require('react');
 var Router = require('react-router');
@@ -12,6 +13,8 @@ var mongoose = require('mongoose');
 var async = require('async');
 var config = require('./config');
 var AWS = require('aws-sdk'); 
+var passport = require('passport');
+var LocalStrategy = require('passport-local').Strategy;
 
 // var s3 = new AWS.S3(); 
 
@@ -31,10 +34,7 @@ var AWS = require('aws-sdk');
 
 // //});
 
-mongoose.connect(config.database);
-mongoose.connection.on('error', function() {
-  console.info('Error: Could not connect to MongoDB. Did you forget to run `mongod`?');
-});
+
 
 var app = express();
 
@@ -42,16 +42,35 @@ app.set('port', process.env.PORT || 3000);
 app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
+app.use(cookieParser());
+app.use(require('express-session')({
+    secret: 'keyboard cat',
+    resave: false,
+    saveUninitialized: false
+}));
+app.use(passport.initialize());
+app.use(passport.session());
 app.use(express.static(path.join(__dirname, 'public')));
-
 //Express handler for responding to API calls
 app.use('/api', api);
+
+
+var Account = require('./models/accounts');
+passport.use(new LocalStrategy(Account.authenticate()));
+passport.serializeUser(Account.serializeUser());
+passport.deserializeUser(Account.deserializeUser());
+
+mongoose.connect(config.database);
+mongoose.connection.on('error', function() {
+  console.info('Error: Could not connect to MongoDB. Did you forget to run `mongod`?');
+});
 //app.use(busboy());
 /**
  * POST /api/sitio
  * Adds new sitio to the database.
  */
- 
+
+
 console.log("loading router");
 //React Routing for client side rendering, Isomorphic
 app.use(function(req, res) {

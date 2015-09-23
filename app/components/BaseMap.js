@@ -25,28 +25,28 @@ var BaseMap = React.createClass({
 		return({coords: {
 	         lat: 4.597,
 	         lng: -74.09
-	     }, sitios: null, 
+	     }, 
 	     selected: null,
-	     mapLoaded: false, 
+	     mapLoaded: false,
 	     dataLoadedToMap: false});
 	},
-	initSitios(sitios){
-		var sit = sitios.map(function(obj, index){
-			obj.properties.tempId = index;
-			if(obj.properties.sonidoUrl){
-				console.log(" has sound "+ obj.properties.sonidoUrl);
-				this.audioContext.addSound(index, obj.properties.sonidoUrl);
-				obj.properties.hasSound = true;
-			} else {
-				obj.properties.hasSound = false;
-			}
-			return obj;
-		}.bind(this));
-		this.setState({sitios: sit});
-	},
+	// initSitios(sitios){
+	// 	var sit = sitios.map(function(obj, index){
+	// 		obj.properties.tempId = index;
+	// 		if(obj.properties.sonidoUrl){
+	// 			console.log(" has sound "+ obj.properties.sonidoUrl);
+	// 			this.audioContext.addSound(index, obj.properties.sonidoUrl);
+	// 			obj.properties.hasSound = true;
+	// 		} else {
+	// 			obj.properties.hasSound = false;
+	// 		}
+	// 		return obj;
+	// 	}.bind(this));
+	// 	this.setState({sitios: sit});
+	// },
 	updatePixelCoords(){
-	if(this.state.sitios != null && this.state.mapLoaded){
-		var sit = this.state.sitios.map(function(obj, index){
+	if(this.props.sitios != null && this.state.mapLoaded){
+		var sit = this.props.sitios.map(function(obj, index){
 			
 			obj.properties.screenCoords = this.map.project({lat: obj.geometry.coordinates[1], lng: obj.geometry.coordinates[0]});
 			return obj;
@@ -57,10 +57,10 @@ var BaseMap = React.createClass({
 	},
 	renderCanvas(){
 		this.ctx.clearRect(0,0, window.innerWidth, window.innerHeight);
-		var rad = 10;
+		var rad = 8;
 		var outerRad;
-		for(var i = 0; i < this.state.sitios.length; i++){
-			var obj = this.state.sitios[i];
+		for(var i = 0; i < this.props.sitios.length; i++){
+			var obj = this.props.sitios[i];
 			outerRad = rad+3;
 			var vol = 0;
 			
@@ -68,13 +68,15 @@ var BaseMap = React.createClass({
 			if(this.state.selected != null && obj.properties.tempId == this.state.selected.tempId){
 				// = 20;
 			}
-			this.ctx.fillStyle = "#FF3366";
+			//this.ctx.fillStyle = "#FF3366";
+			//this.ctx.fillStyle = "#000";
+			this.ctx.fillStyle = obj.properties.color;
 			this.ctx.beginPath();
 			drawHex(this.ctx, obj.properties.screenCoords, rad);
 			this.ctx.closePath();
 			this.ctx.fill();
-			if(this.state.sitios[i].properties.hasSound){
-				vol = this.audioContext.getVolume(i);
+			if(this.props.sitios[i].properties.hasSound){
+				vol = this.props.audioContext.getVolume(i);
 				//console.log(vol);
 				outerRad = outerRad + vol;
 				var opacity = 0.7*(1-vol/100);
@@ -110,7 +112,7 @@ var BaseMap = React.createClass({
 	},
 	addGeoJSON(){
 		//only load data if map has been initialized, data has been received, and data has no already been loaded
-		if(this.state.sitios != null && this.state.mapLoaded && !this.state.dataLoadedToMap){
+		if(this.props.sitios != null && this.state.mapLoaded && !this.state.dataLoadedToMap){
 			
 			console.log("adding data");
 			// console.log(this.state.sitios);
@@ -119,10 +121,12 @@ var BaseMap = React.createClass({
 			   // "data": this.state.sitios,
 			    "data": {
 			      "type": "FeatureCollection",
-			      "features": this.state.sitios
+			      "features": this.props.sitios
 			    }
 			  });
 			 //{respuesta}
+			  // "text-max-width": 40,
+			      // "text-transform": "uppercase",
 			 this.map.addLayer({
 			    "id": "markers",
 			    "type": "symbol",
@@ -133,17 +137,15 @@ var BaseMap = React.createClass({
 			      "text-field": "{respuesta}",
 			      "text-font": ["Open Sans Semibold, Arial Unicode MS Bold"],
 
-			     "text-offset": [1.0, 0.0],
-			      "text-anchor": "left",
-			      "text-justify": "left",
-			      "text-max-width": 40,
-			      "text-transform": "uppercase",
-			      "text-optional": true
+			    "text-offset": [0.0, 1.0],
+			      "text-anchor": "top",
+			      "text-justify": "center",
+			      "text-optional": true,
+			      "text-size": 12,
 			    },
 			    "paint": {
 			    	"icon-opacity": 0.05,
-			      "text-size": 18,
-			        "text-color": "#f36"
+			        "text-color":"#111"
 			    }
 			  });
 			 
@@ -175,15 +177,7 @@ var BaseMap = React.createClass({
 	componentDidMount(){
 		console.log("calling component mount");
 		console.log(this.props);
-		this.audioContext = new AudioContextManager();
-		request
-		   .get('/api/sitios')
-		   .query({ limit: 50 })
-		   .end(function(err, res){
-		   		console.log(res.body);
-		   		this.initSitios(res.body);
-		   		//this.setState({sitios: res.body}, this.addGeoJSON);
-		   }.bind(this));
+		
 		mapboxgl.accessToken = 'pk.eyJ1Ijoib2oiLCJhIjoiSEw0cDJaNCJ9.9ffK1AU2O26zvS5Zsa6eqw';
 		this.map = new mapboxgl.Map({
 		  container: 'map-fullscreen', // container id
@@ -251,6 +245,8 @@ var BaseMap = React.createClass({
 	render() {
 		//console.l	<label>{this.props.label}</label>og("rerendering maplocator");
 		var info = [];
+		
+
 		if(this.state.selected != null) {
 			 info.push(<HexGrid />);
 			info.push(<InfoDetail info = {this.state.selected} coords = {this.state.coords} />);

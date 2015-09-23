@@ -7,6 +7,9 @@ import Projeccion from './components/Projeccion';
 import Web from './components/Web';
 import SvgHex from './components/SvgHex';
 import SoundIcon from './components/SoundIcon';
+import Login from './components/Login';
+import Register from './components/Register';
+
 
 export default (
   <Route handler={App}>
@@ -14,6 +17,8 @@ export default (
   	<Route path='/edit' handler={AdminList} />
   	<Route path='/projeccion' handler={Projeccion} />
   	<Route path='/web' handler={Web} />
+  	<Route path='/login' handler={Login} />
+  	<Route path='/register' handler={Register} />
     <Route path='/' handler={SoundIcon} />
   </Route>
 );

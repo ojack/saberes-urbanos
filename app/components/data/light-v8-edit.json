@@ -2487,7 +2487,7 @@
         }
       },
       "paint": {
-        "text-color": "#666",
+        "text-color": "#999",
         "text-halo-color": "#fff",
         "text-halo-width": 1,
         "text-halo-blur": 1,

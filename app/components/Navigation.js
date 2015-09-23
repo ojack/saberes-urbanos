@@ -2,6 +2,7 @@ import React from 'react';
 import SearchDropdown from './SearchDropdown'
 import request from 'superagent';
 import Select from 'react-select';
+import Categorias from './Categorias';
 
 var Navigation = React.createClass({
 	 getInitialState(){
@@ -39,6 +40,8 @@ var Navigation = React.createClass({
         this.props.setBounds(this.state.barrios[index].bbox);
     },
   render() {
+    // 
+   
   	var localidadOptions = [];
         if(this.state.localidades!=null){
             localidadOptions = this.state.localidades.map(function(obj, index){
@@ -59,6 +62,7 @@ var Navigation = React.createClass({
            // console.log(barrioOptions);
         }
   	  return(<form id="navigator">
+            <Categorias color={this.props.color} categorias={this.props.categorias}/>
   	  			<input className="u-full-width" type="text" placeholder="Buscar.." id="exampleEmailInput"/>
   	  			
 			   

@@ -3,19 +3,50 @@ var router = express.Router();
 var multer = require('multer');
 var upload = multer({ dest: 'uploads/' });
 var Sitio = require('./../models/sitios');
+var Account = require('./../models/accounts');
 var Localidad = require('./../models/localidades');
 var Barrio = require('./../models/barrios');
 var config = require('./../config');
 var fs = require('fs');
 var aws = require('aws-sdk'); 
+
 //var https = require('https');
 var request = require('superagent');
 var path = require('path');
+
+var passport = require('passport');
+var LocalStrategy = require('passport-local').Strategy
 
 var AWS_ACCESS_KEY = process.env.AWS_ACCESS_KEY;
 var AWS_SECRET_KEY = process.env.AWS_SECRET_KEY;
 var S3_BUCKET = process.env.S3_BUCKET;
 var S3_BUCKET_RESIZE = process.env.S3_BUCKET_RESIZE;
+
+
+/* user auth */
+
+router.post('/register', function(req, res) {
+    console.log(req.body.username);
+     console.log(req.body.password);
+    Account.register(new Account({ username : req.body.username }), req.body.password, function(err, account) {
+        if (err) {
+            res.write(err);
+            res.end();
+        }
+
+        passport.authenticate('local')(req, res, function () {
+            res.write("success");
+            res.end();
+        });
+    });
+});
+
+
+router.post('/login', passport.authenticate('local'), function(req, res) {
+    res.write('valid');
+    res.end();
+   
+});
 
 var cpUpload = upload.fields([{ name: 'foto' }, { name: 'sonido' }, { name: 'data'}, {name: 'localidad'}, {name: 'barrio'}])
 
