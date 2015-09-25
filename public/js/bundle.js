@@ -303,7 +303,11 @@ var AddSite = _react2['default'].createClass({
                     null,
                     _react2['default'].createElement('input', { className: 'btn btn-default', onClick: this.resetForm, type: 'reset', defaultValue: 'Reset' }),
                     ' ',
-                    _react2['default'].createElement('input', { className: 'btn btn-primary', onClick: this.submitForm, formNoValidate: true, type: 'submit', defaultValue: 'Submit' })
+                    _react2['default'].createElement(
+                        'button',
+                        { className: 'btn btn-primary', onClick: this.submitForm },
+                        'Submit '
+                    )
                 )
             ),
             confirm
@@ -314,7 +318,7 @@ var AddSite = _react2['default'].createClass({
 exports['default'] = AddSite;
 module.exports = exports['default'];
 
-},{"./ConfirmSubmit":8,"./FormsyDropdown":10,"./FormsyInput":11,"./MapLocator":22,"./MultipleDropdown":23,"formsy-react":50,"formsy-react-components":42,"react":"react","react-select":54,"superagent":59}],2:[function(require,module,exports){
+},{"./ConfirmSubmit":8,"./FormsyDropdown":10,"./FormsyInput":11,"./MapLocator":22,"./MultipleDropdown":23,"formsy-react":50,"formsy-react-components":42,"react":"react","react-select":55,"superagent":60}],2:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -476,7 +480,7 @@ var AdminList = _react2['default'].createClass({
 exports['default'] = AdminList;
 module.exports = exports['default'];
 
-},{"./AddSite":1,"./ListEntry":19,"react":"react","superagent":59}],4:[function(require,module,exports){
+},{"./AddSite":1,"./ListEntry":19,"react":"react","superagent":60}],4:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -870,7 +874,7 @@ var BaseMap = _react2['default'].createClass({
 exports['default'] = BaseMap;
 module.exports = exports['default'];
 
-},{"./AudioContextManager":5,"./HexGrid":13,"./InfoDetail":14,"./SvgHex":29,"./data/light-v8-edit.json":32,"react":"react","superagent":59}],7:[function(require,module,exports){
+},{"./AudioContextManager":5,"./HexGrid":13,"./InfoDetail":14,"./SvgHex":29,"./data/light-v8-edit.json":32,"react":"react","superagent":60}],7:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -1210,7 +1214,7 @@ exports['default'] = ConfirmSubmit;
 // });
 module.exports = exports['default'];
 
-},{"react":"react","superagent":59}],9:[function(require,module,exports){
+},{"react":"react","superagent":60}],9:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -1423,6 +1427,7 @@ var Geocode = _react2['default'].createClass({
 	displayName: 'Geocode',
 
 	getInitialState: function getInitialState() {
+		console.log(this.props.geocoder);
 		//when user hasnt touched search box, value is set from props
 		return { updateFromProps: true, querystring: this.props.querystring };
 	},
@@ -1445,16 +1450,37 @@ var Geocode = _react2['default'].createClass({
 	geocode: function geocode() {
 		//console.log("query string is " + this.state.querystring);
 		if (this.state.querystring != null) {
-			var query = { query: this.state.querystring, lat: this.props.coords.lat, lng: this.props.coords.lng };
-			//console.log(query);
-			_superagent2['default'].get('/api/geocode').query(query).end((function (err, res) {
-				if (err) {
-					//console.log(err);
+			console.log(this.props.bounds);
+			this.props.geocoder.geocode({ 'address': this.state.querystring, 'componentRestrictions': { country: 'CO', locality: 'Bogotá' }, bounds: this.props.bounds, 'region': 'CO' }, (function (results, status) {
+				if (status === google.maps.GeocoderStatus.OK) {
+					// resultsMap.setCenter(results[0].geometry.location);
+					// var marker = new google.maps.Marker({
+					//   map: resultsMap,
+					//   position: results[0].geometry.location
+					// });
+					// var data = {};
+					// data.coords = {};
+					// data.coords.lat = results[0].geometry.location.H;
+					// data.coords.lng = results[0].geometry.location.L;
+					this.props.updateCoords(results[0].geometry.location);
+					console.log(results);
 				} else {
-						//console.log(res);
-						this.props.updateCoords(res.body);
-					}
+					console.log('Geocode was not successful for the following reason: ' + status);
+				}
 			}).bind(this));
+			// 	var query = { query: this.state.querystring, lat: this.props.coords.lat, lng: this.props.coords.lng };
+			// 	//console.log(query);
+			// 	 request
+			// 	   .get('/api/geocode')
+			// 	   .query(query)
+			// 	   .end(function(err, res){
+			// 	   		if(err){
+			// 	   			//console.log(err);
+			// 	   		} else {
+			// 	   			//console.log(res);
+			// 	   			this.props.updateCoords(res.body);
+			// 	   		}
+			// 	   }.bind(this));
 		}
 	},
 	componentWillReceiveProps: function componentWillReceiveProps(nextProps) {
@@ -1482,7 +1508,7 @@ var Geocode = _react2['default'].createClass({
 exports['default'] = Geocode;
 module.exports = exports['default'];
 
-},{"react":"react","superagent":59}],13:[function(require,module,exports){
+},{"react":"react","superagent":60}],13:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -2206,7 +2232,7 @@ var Login = _react2['default'].createClass({
 exports['default'] = Login;
 module.exports = exports['default'];
 
-},{"./AdminList":3,"react":"react","superagent":59}],21:[function(require,module,exports){
+},{"./AdminList":3,"react":"react","superagent":60}],21:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -2335,11 +2361,11 @@ var Main = _react2['default'].createClass({
 exports['default'] = Main;
 module.exports = exports['default'];
 
-},{"./AudioContextManager":5,"./BaseMap":6,"./HexGrid":13,"./Ingresar":16,"./Navigation":24,"react":"react","superagent":59}],22:[function(require,module,exports){
+},{"./AudioContextManager":5,"./BaseMap":6,"./HexGrid":13,"./Ingresar":16,"./Navigation":24,"react":"react","superagent":60}],22:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
-	value: true
+  value: true
 });
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
@@ -2362,82 +2388,121 @@ var _Geocode = require('./Geocode');
 
 var _Geocode2 = _interopRequireDefault(_Geocode);
 
+var ReactScriptLoaderModule = require('react-script-loader');
+var ReactScriptLoaderMixin = ReactScriptLoaderModule.ReactScriptLoaderMixin;
+var ReactScriptLoader = ReactScriptLoaderModule.ReactScriptLoader;
+
+var API_KEY = "AIzaSyDSAaqtPycMHBfGlBjG-q-UzKm6T-YDHhA";
+
+var scriptURL = "https://maps.googleapis.com/maps/api/js?key=" + API_KEY + "&callback=initMap";
+
 var MapLocator = _react2['default'].createClass({
-	displayName: 'MapLocator',
+  displayName: 'MapLocator',
 
-	mixins: [_formsyReact2['default'].Mixin],
-	// componentWillReceiveProps(nextProps){
-	// 	if(nextProps.location != this.props.location){
-	// 		this.map.flyTo({center: [nextProps.location.lat, nextProps.location.lng], zoom: 16});
-	// 	}
+  mixins: [_formsyReact2['default'].Mixin, ReactScriptLoaderMixin],
+  // componentWillReceiveProps(nextProps){
+  // 	if(nextProps.location != this.props.location){
+  // 		this.map.flyTo({center: [nextProps.location.lat, nextProps.location.lng], zoom: 16});
+  // 	}
 
-	// },
-	// changeValue: function(lat, lng){
-	// 	this.setValue(event.currentTarget.value);
-	// },
-	updateCoords: function updateCoords(data) {
-		//console.log("updating");
-		//console.log(data);
-		this.setValue({ lat: data.coords.lat, lng: data.coords.lng });
-		this.map.flyTo({ center: [data.coords.lng, data.coords.lat], zoom: 16 });
-	},
-	componentDidMount: function componentDidMount() {
-		//console.log("calling component mount");
-		//console.log(this.props);
-		mapboxgl.accessToken = 'pk.eyJ1Ijoib2oiLCJhIjoiSEw0cDJaNCJ9.9ffK1AU2O26zvS5Zsa6eqw';
-		this.map = new mapboxgl.Map({
-			container: 'map', // container id
-			//style: 'https://www.mapbox.com/mapbox-gl-styles/styles/light-v7.json', //stylesheet location
-			style: _dataLightV8Json2['default'],
-			center: [this.getValue().lng, this.getValue().lat], // starting position
-			zoom: 11 });
-		// starting zoom
-		// pitch: 45
-		this.map.rotateTo(100);
-		// Add zoom and rotation controls to the map.
-		this.map.addControl(new mapboxgl.Navigation());
-		this.map.on('style.load', (function () {
-			/*if(this.props.localidadData!=null){
-   	this.loadMapData(this.props.localidadData);
-   }*/
-			//this.loadMapData(LOCALIDAD_DATA);
-		}).bind(this));
-		this.map.on('move', (function () {
-			var coords = this.map.getCenter();
+  // },
+  // changeValue: function(lat, lng){
+  // 	this.setValue(event.currentTarget.value);
+  // },
+  getScriptURL: function getScriptURL() {
+    return scriptURL;
+  },
+  // Ensure that onScriptLoaded is deferred until the
+  // ReactScriptLoader.triggerOnScriptLoaded() call above is made in
+  // initializeMaps().
+  deferOnScriptLoaded: function deferOnScriptLoaded() {
+    return true;
+  },
 
-			this.setValue({ lat: coords.lat, lng: coords.lng });
-		}).bind(this));
-	},
-	componentWillReceiveProps: function componentWillReceiveProps(nextProps) {
-		//console.log("locator received props");
-		//console.log(nextProps);
-	},
-	render: function render() {
-		//console.log("rerendering maplocator");
-		return _react2['default'].createElement(
-			'div',
-			null,
-			_react2['default'].createElement(
-				'label',
-				null,
-				this.props.label
-			),
-			_react2['default'].createElement(
-				'div',
-				{ id: 'map-container' },
-				_react2['default'].createElement('div', { id: 'map' }),
-				_react2['default'].createElement('img', { id: 'pin', src: '/img/pin-flat.png', alt: 'pin', height: '40', width: '25' }),
-				_react2['default'].createElement(_Geocode2['default'], { coords: this.getValue(), querystring: this.props.direccion, updateCoords: this.updateCoords }),
-				_react2['default'].createElement('div', { id: 'block-text' })
-			)
-		);
-	}
+  onScriptLoaded: function onScriptLoaded() {
+    // Render a map with the center point given by the component's lat and lng
+    // properties.
+    console.log("script loaded");
+
+    //[this.getValue().lng, this.getValue().lat]
+    this.map = new google.maps.Map(document.getElementById('map'), {
+      center: { lat: this.getValue().lat, lng: this.getValue().lng },
+      zoom: 13,
+      streetViewControl: false
+    });
+    google.maps.event.addListenerOnce(this.map, 'idle', (function () {
+      var bounds = this.map.getBounds();
+      console.log("bounds are");
+      console.log(bounds);
+      this.setState({ scriptLoaded: true, bounds: bounds });
+    }).bind(this));
+
+    this.map.addListener('center_changed', (function () {
+      var coords = this.map.getCenter();
+      //console.log(coords);
+      this.setValue({ lat: coords.H, lng: coords.L });
+      var bounds = this.map.getBounds();
+      this.setState({ bounds: bounds });
+    }).bind(this));
+    this.geocoder = new google.maps.Geocoder();
+  },
+  onScriptError: function onScriptError() {
+    // Show the user an error message.
+  },
+  getInitialState: function getInitialState() {
+    return { scriptLoaded: false, bounds: null };
+  },
+  updateCoords: function updateCoords(loc) {
+    //console.log("updating");
+    //console.log(data);
+    //data.coords.lat = loc.H;
+    // data.coords.lng = results[0].geometry.location.L;
+    this.setValue({ lat: loc.H, lng: loc.L });
+    this.map.setCenter(loc, 16);
+    //this.map.flyTo({center: [data.coords.lng, data.coords.lat], zoom: 16});
+  },
+  componentDidMount: function componentDidMount() {
+    //console.log("calling component mount");
+    //console.log(this.props);
+    window.initMap = function () {
+
+      // This triggers the onScriptLoaded method call on all mounted Map components.
+      ReactScriptLoader.triggerOnScriptLoaded(scriptURL);
+    };
+  },
+  componentWillReceiveProps: function componentWillReceiveProps(nextProps) {
+    //console.log("locator received props");
+    //console.log(nextProps);
+  },
+  render: function render() {
+    //console.log("rerendering maplocator");
+    var geocode = {};
+    if (this.state.scriptLoaded) {
+      geocode = _react2['default'].createElement(_Geocode2['default'], { coords: this.getValue(), geocoder: this.geocoder, bounds: this.state.bounds, querystring: this.props.direccion, updateCoords: this.updateCoords });
+    }
+    return _react2['default'].createElement(
+      'div',
+      null,
+      _react2['default'].createElement(
+        'label',
+        null,
+        this.props.label
+      ),
+      _react2['default'].createElement(
+        'div',
+        { id: 'map-container' },
+        _react2['default'].createElement('div', { id: 'map' }),
+        _react2['default'].createElement('img', { id: 'pin', src: '/img/pin-flat.png', alt: 'pin', height: '40', width: '25' }),
+        geocode
+      )
+    );
+  }
 });
 
 exports['default'] = MapLocator;
 module.exports = exports['default'];
 
-},{"./Geocode":12,"./data/light-v8.json":33,"formsy-react":50,"react":"react"}],23:[function(require,module,exports){
+},{"./Geocode":12,"./data/light-v8.json":33,"formsy-react":50,"react":"react","react-script-loader":53}],23:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -2648,7 +2713,7 @@ var Navigation = _react2['default'].createClass({
 exports['default'] = Navigation;
 module.exports = exports['default'];
 
-},{"./Categorias":7,"./SearchDropdown":27,"react":"react","react-select":54,"superagent":59}],25:[function(require,module,exports){
+},{"./Categorias":7,"./SearchDropdown":27,"react":"react","react-select":55,"superagent":60}],25:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -2744,7 +2809,7 @@ var Register = _react2['default'].createClass({
 exports['default'] = Register;
 module.exports = exports['default'];
 
-},{"react":"react","superagent":59}],27:[function(require,module,exports){
+},{"react":"react","superagent":60}],27:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -12321,6 +12386,126 @@ var validations = {
 module.exports = validations;
 
 },{}],53:[function(require,module,exports){
+
+// A dictionary mapping script URLs to a dictionary mapping
+// component key to component for all components that are waiting
+// for the script to load.
+var scriptObservers = {};
+
+// A dictionary mapping script URL to a boolean value indicating if the script
+// has already been loaded.
+var loadedScripts = {};
+
+// A dictionary mapping script URL to a boolean value indicating if the script
+// has failed to load.
+var erroredScripts = {};
+
+// A counter used to generate a unique id for each component that uses
+// ScriptLoaderMixin.
+var idCount = 0;
+
+var ReactScriptLoader = {
+	componentDidMount: function(key, component, scriptURL) {
+		if (typeof component.onScriptLoaded !== 'function') {
+			throw new Error('ScriptLoader: Component class must implement onScriptLoaded()');
+		}
+		if (typeof component.onScriptError !== 'function') {
+			throw new Error('ScriptLoader: Component class must implement onScriptError()');
+		}
+		if (loadedScripts[scriptURL]) {
+			component.onScriptLoaded();
+			return;
+		}
+		if (erroredScripts[scriptURL]) {
+			component.onScriptError();
+			return;
+		}
+
+		// If the script is loading, add the component to the script's observers
+		// and return. Otherwise, initialize the script's observers with the component
+		// and start loading the script.
+		if (scriptObservers[scriptURL]) {
+			scriptObservers[scriptURL][key] = component;
+			return;
+		}
+
+		var observers = {};
+		observers[key] = component;
+		scriptObservers[scriptURL] = observers;
+
+		var script = document.createElement('script');
+		script.src = scriptURL;
+
+		var callObserverFuncAndRemoveObserver = function(func) {
+			var observers = scriptObservers[scriptURL];
+			for (var key in observers) {
+				observer = observers[key];
+				var removeObserver = func(observer);
+				if (removeObserver) {
+					delete scriptObservers[scriptURL][key];
+				}
+			}
+			//delete scriptObservers[scriptURL];
+		}
+		script.onload = function() {
+			loadedScripts[scriptURL] = true;
+			callObserverFuncAndRemoveObserver(function(observer) {
+				if (observer.deferOnScriptLoaded && observer.deferOnScriptLoaded()) {
+					return false;
+				}
+				observer.onScriptLoaded();
+				return true;
+			});
+		};
+		script.onerror = function(event) {
+			erroredScripts[scriptURL] = true;
+			callObserverFuncAndRemoveObserver(function(observer) {
+				observer.onScriptError();
+				return true;
+			});
+		};
+		document.body.appendChild(script);
+	},
+	componentWillUnmount: function(key, scriptURL) {
+		// If the component is waiting for the script to load, remove the
+		// component from the script's observers before unmounting the component.
+		var observers = scriptObservers[scriptURL];
+		if (observers) {
+			delete observers[key];
+		}
+	},
+	triggerOnScriptLoaded: function(scriptURL) {
+		if (!loadedScripts[scriptURL]) {
+			throw new Error('Error: only call this function after the script has in fact loaded.');
+		}
+		var observers = scriptObservers[scriptURL];
+		for (var key in observers) {
+			var observer = observers[key];
+			observer.onScriptLoaded();
+		}
+		delete scriptObservers[scriptURL];
+	}
+};
+
+var ReactScriptLoaderMixin = {
+	componentDidMount: function() {
+		if (typeof this.getScriptURL !== 'function') {
+			throw new Error("ScriptLoaderMixin: Component class must implement getScriptURL().")
+		}
+		ReactScriptLoader.componentDidMount(this.__getScriptLoaderID(), this, this.getScriptURL());
+	},
+	componentWillUnmount: function() {
+		ReactScriptLoader.componentWillUnmount(this.__getScriptLoaderID(), this.getScriptURL());
+	},
+	__getScriptLoaderID: function() {
+		return 'id' + idCount++;
+	},
+};
+
+exports.ReactScriptLoaderMixin = ReactScriptLoaderMixin;
+exports.ReactScriptLoader = ReactScriptLoader;
+
+},{}],54:[function(require,module,exports){
 'use strict';
 
 var React = require('react');
@@ -12378,7 +12563,7 @@ var Option = React.createClass({
 });
 
 module.exports = Option;
-},{"classnames":57,"react":"react"}],54:[function(require,module,exports){
+},{"classnames":58,"react":"react"}],55:[function(require,module,exports){
 /* disable some rules until we refactor more completely; fixing them now would
    cause conflicts with some open PRs unnecessarily. */
 /* eslint react/jsx-sort-prop-types: 0, react/sort-comp: 0, react/prop-types: 0 */
@@ -13253,7 +13438,7 @@ var Select = React.createClass({
 });
 
 module.exports = Select;
-},{"./Option":53,"./SingleValue":55,"./Value":56,"classnames":57,"react":"react","react-input-autosize":58}],55:[function(require,module,exports){
+},{"./Option":54,"./SingleValue":56,"./Value":57,"classnames":58,"react":"react","react-input-autosize":59}],56:[function(require,module,exports){
 'use strict';
 
 var React = require('react');
@@ -13282,7 +13467,7 @@ var SingleValue = React.createClass({
 });
 
 module.exports = SingleValue;
-},{"classnames":57,"react":"react"}],56:[function(require,module,exports){
+},{"classnames":58,"react":"react"}],57:[function(require,module,exports){
 'use strict';
 
 var React = require('react');
@@ -13367,7 +13552,7 @@ var Value = React.createClass({
 });
 
 module.exports = Value;
-},{"classnames":57,"react":"react"}],57:[function(require,module,exports){
+},{"classnames":58,"react":"react"}],58:[function(require,module,exports){
 /*!
   Copyright (c) 2015 Jed Watson.
   Licensed under the MIT License (MIT), see
@@ -13418,7 +13603,7 @@ module.exports = Value;
 
 }());
 
-},{}],58:[function(require,module,exports){
+},{}],59:[function(require,module,exports){
 'use strict';
 
 var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
@@ -13525,7 +13710,7 @@ var AutosizeInput = React.createClass({
 });
 
 module.exports = AutosizeInput;
-},{"react":"react"}],59:[function(require,module,exports){
+},{"react":"react"}],60:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -14665,7 +14850,7 @@ request.put = function(url, data, fn){
 
 module.exports = request;
 
-},{"emitter":60,"reduce":61}],60:[function(require,module,exports){
+},{"emitter":61,"reduce":62}],61:[function(require,module,exports){
 
 /**
  * Expose `Emitter`.
@@ -14831,7 +15016,7 @@ Emitter.prototype.hasListeners = function(event){
   return !! this.listeners(event).length;
 };
 
-},{}],61:[function(require,module,exports){
+},{}],62:[function(require,module,exports){
 
 /**
  * Reduce `arr` with `fn`.

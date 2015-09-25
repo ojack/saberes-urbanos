@@ -279,7 +279,7 @@ var AddSite = React.createClass({
                     <Row >
                         <input className="btn btn-default" onClick={this.resetForm} type="reset" defaultValue="Reset" />
                         {' '}
-                        <input className="btn btn-primary" onClick={this.submitForm} formNoValidate={true} type="submit" defaultValue="Submit" />
+                        <button className="btn btn-primary" onClick={this.submitForm}>Submit </button>
                     </Row>
                 </Formsy.Form>
                   {confirm}

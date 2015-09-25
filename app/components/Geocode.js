@@ -3,6 +3,7 @@ import request from 'superagent';
 
 var Geocode = React.createClass({
 	getInitialState(){
+		console.log(this.props.geocoder);
 		//when user hasnt touched search box, value is set from props
 		return {updateFromProps: true, querystring: this.props.querystring}
 	},
@@ -26,19 +27,37 @@ var Geocode = React.createClass({
 	geocode(){
 		//console.log("query string is " + this.state.querystring);
 		if(this.state.querystring != null){
-			var query = { query: this.state.querystring, lat: this.props.coords.lat, lng: this.props.coords.lng };
-			//console.log(query);
-			 request
-			   .get('/api/geocode')
-			   .query(query)
-			   .end(function(err, res){
-			   		if(err){
-			   			//console.log(err);
-			   		} else {
-			   			//console.log(res);
-			   			this.props.updateCoords(res.body);
-			   		}
-			   }.bind(this));
+			console.log(this.props.bounds);
+			this.props.geocoder.geocode({'address': this.state.querystring, 'componentRestrictions': {country: 'CO', locality: 'Bogotá'}, bounds: this.props.bounds, 'region': 'CO'}, function(results, status) {
+			    if (status === google.maps.GeocoderStatus.OK) {
+			      // resultsMap.setCenter(results[0].geometry.location);
+			      // var marker = new google.maps.Marker({
+			      //   map: resultsMap,
+			      //   position: results[0].geometry.location
+			      // });
+				// var data = {};
+				// data.coords = {};
+				// data.coords.lat = results[0].geometry.location.H;
+				// data.coords.lng = results[0].geometry.location.L;
+				this.props.updateCoords(results[0].geometry.location);
+					console.log(results);
+			    } else {
+			      console.log('Geocode was not successful for the following reason: ' + status);
+			    }
+  			}.bind(this));
+		// 	var query = { query: this.state.querystring, lat: this.props.coords.lat, lng: this.props.coords.lng };
+		// 	//console.log(query);
+		// 	 request
+		// 	   .get('/api/geocode')
+		// 	   .query(query)
+		// 	   .end(function(err, res){
+		// 	   		if(err){
+		// 	   			//console.log(err);
+		// 	   		} else {
+		// 	   			//console.log(res);
+		// 	   			this.props.updateCoords(res.body);
+		// 	   		}
+		// 	   }.bind(this));
 		}
 	},
 	componentWillReceiveProps(nextProps){
