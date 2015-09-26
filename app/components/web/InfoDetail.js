@@ -1,6 +1,5 @@
 import React from 'react';
 import InfoWindow from './InfoWindow';
-import HexGrid from './HexGrid';
 
 var InfoDetail = React.createClass({
 

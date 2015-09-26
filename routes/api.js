@@ -386,6 +386,40 @@ router.get('/barrios', function(req, res, next) {
     });
 });
 
+router.get('/localidadJson', function(req, res, next) {  
+    console.log("received localidades request");
+    // find a location
+     var id = req.query.id || '';
+     var query =  {_id: id};
+    
+    Localidad.findOne(query, {}).exec(function(err, outline) {
+      if (err) {
+        console.log(err);
+        return res.json(500, err);
+      }
+       console.log("found");
+      console.log(outline);
+      res.json(200, outline);
+    });
+});
+
+router.get('/barrioJson', function(req, res, next) {  
+    //console.log("received localidades request");
+    // find a location
+     var id = req.query.id || '';
+     var query =  {_id: id};
+    
+    Barrio.findOne(query, {}).exec(function(err, outline) {
+      if (err) {
+        console.log(err);
+        return res.json(500, err);
+      }
+       console.log("found");
+      console.log(outline);
+      res.json(200, outline);
+    });
+});
+
 router.get('/localidades', function(req, res, next) {  
     console.log("received localidades request");
     // find a location

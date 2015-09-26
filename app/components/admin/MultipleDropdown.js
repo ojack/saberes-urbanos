@@ -1,6 +1,6 @@
 import React from 'react';
 import Formsy from 'formsy-react'
-import Categorias from './data/categorias.json'
+import Categorias from './../data/categorias.json'
 import Dropdown from './Dropdown'
 
   var MultipleDropdown = React.createClass({

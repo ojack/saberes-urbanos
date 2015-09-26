@@ -1,5 +1,4 @@
 import React from 'react';
-import SvgHex from './SvgHex';
 
 var InfoWindow = React.createClass({
 

@@ -1,10 +1,9 @@
 import React from 'react';
 //import mapboxgl from 'mapbox-gl';
 import request from 'superagent';
-import mapStyle from './data/light-v8-edit.json'
+import mapStyle from './../data/light-v8-edit.json'
 import HexGrid from './HexGrid'
 import InfoDetail from './InfoDetail'
-import SvgHex from './SvgHex'
 import AudioContextManager from './AudioContextManager'
 
 function drawHex(ctx, coords, rad){
@@ -110,6 +109,31 @@ var BaseMap = React.createClass({
 		}
 		requestAnimationFrame(this.renderCanvas);
 	},
+	addOutline(outline){
+		console.log("adding outline");
+		
+		if(this.outlineSource==null){
+			this.outlineSource = new mapboxgl.GeoJSONSource({data: outline});
+			this.map.addSource('outline', this.outlineSource); // add
+				this.map.addLayer({
+				    "id": "outline",
+				    "type": "line",
+				    "source": "outline",
+				    "paint": {
+				    
+				      "line-color": "rgba(120, 120, 120, 1.0)",
+				      "line-width": 5,
+				  
+				    // "fill-outline-color": "#333"
+				    },
+				   // "interactive": true
+				    
+				  //paint.* : class-specific paint properties
+				});
+		} else {
+			this.outlineSource.setData(outline);
+		}
+	},
 	addGeoJSON(){
 		//only load data if map has been initialized, data has been received, and data has no already been loaded
 		if(this.props.sitios != null && this.state.mapLoaded && !this.state.dataLoadedToMap){
@@ -165,11 +189,15 @@ var BaseMap = React.createClass({
 			         	this.map.flyTo({center: e.lngLat, zoom: 16, pitch: 100});
 
 			         } else {
-			         	this.setState({selected: null, coords: {lat: e.lngLat.lat, lng: e.lngLat.lng}}, this.renderCanvas);
-			         	this.map.flyTo({center: e.lngLat, zoom: 15, pitch: 40});
+			         	this.setState({selected: null});
+			         	//this.setState({selected: null, coords: {lat: e.lngLat.lat, lng: e.lngLat.lng}}, this.renderCanvas);
+			         	//this.map.flyTo({center: e.lngLat, zoom: 15, pitch: 40});
 			         }
 			      }.bind(this));
   				}.bind(this));
+
+		
+		
 
 		}
 		
@@ -240,6 +268,10 @@ var BaseMap = React.createClass({
 			console.log(nextProps.bounds);
 			this.map.fitBounds(nextProps.bounds, {bearing: 100});
 			this.setState({selected: null});
+			
+		}
+		if(nextProps.outline != this.props.outline){
+				this.addOutline(nextProps.outline);
 		}
 	},
 	render() {

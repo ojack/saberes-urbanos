@@ -1,5 +1,5 @@
 import React from 'react';
-import BaseMap from './BaseMap';
+import BaseMap from './web/BaseMap';
 
 
 var Projeccion = React.createClass({

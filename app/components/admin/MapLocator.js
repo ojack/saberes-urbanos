@@ -1,7 +1,5 @@
 import React from 'react';
 import Formsy from 'formsy-react';
-//import mapboxgl from 'mapbox-gl';
-import mapStyle from './data/light-v8.json'
 import Geocode from './Geocode';
 
 var ReactScriptLoaderModule = require('react-script-loader');

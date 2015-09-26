@@ -1,6 +1,5 @@
 import React from 'react';
 import BaseMap from './BaseMap';
-import HexGrid from './HexGrid';
 import Navigation from './Navigation';
 import Ingresar from './Ingresar'
 import request from 'superagent';
@@ -30,7 +29,7 @@ getInitialState(){
 	var sw = new mapboxgl.LngLat(-74.16126694164626, 4.5155410235603455);
 	var ne = new mapboxgl.LngLat( -73.91643370363467, 4.838602784913988);
 	var bounds = new mapboxgl.LngLatBounds(sw, ne);
-		return ({bounds: bounds, mapLoaded: false, sitios: null, color: "#ff3366", categorias: null});
+		return ({bounds: bounds, mapLoaded: false, sitios: null, color: "#ff3366", categorias: null, outline: null});
 },
 showElements(){
 	this.setState({mapLoaded: true});
@@ -41,6 +40,11 @@ showElements(){
 		var bounds = new mapboxgl.LngLatBounds(sw, ne);
 		this.setState({bounds: bounds});
 	},
+  setOutline(outlineJson){
+    console.log("boundary is ");
+    console.log(outlineJson);
+    this.setState({outline: outlineJson});
+  },
   initSitios(sitios){
      var categorias = {};
     
@@ -84,11 +88,10 @@ showElements(){
   render() {
   	var mapElements = [];
     if(this.state.sitios!=null){
-      mapElements.push( <BaseMap bounds={this.state.bounds} audioContext={this.audioContext} sitios={this.state.sitios} onMapLoaded={this.showElements}/>);
+      mapElements.push( <BaseMap bounds={this.state.bounds} outline={this.state.outline} audioContext={this.audioContext} sitios={this.state.sitios} onMapLoaded={this.showElements}/>);
     }
   	if(this.state.mapLoaded){
-  		//mapElements.push(<HexGrid/>);
-  		mapElements.push(<Navigation setBounds={this.setBounds} categorias={this.state.categorias} color={this.state.color}/>);
+  		mapElements.push(<Navigation setBounds={this.setBounds} setOutline={this.setOutline} categorias={this.state.categorias} color={this.state.color}/>);
   	}
 
   	  return(<div>

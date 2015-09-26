@@ -1,4 +1,4 @@
-import AudioProcessing from './util/AudioProcessing'
+import AudioProcessing from './../util/AudioProcessing'
 
 var url = "https://s3-sa-east-1.amazonaws.com/observatorio-urbano/55f1bcec18cceb8f022a3eb1.mp3";
 
