@@ -5510,25 +5510,39 @@ var AudioProcessing = (function () {
 
     //window.AudioContext = window.AudioContext||window.webkitAudioContext;
     var analyser = context.createAnalyser();
+    var panner = context.createPanner();
+    //   panner.panningModel = 'HRTF';
+    // panner.distanceModel = 'inverse';
+    // panner.refDistance = 1;
+    // panner.maxDistance = 10000;
+    // // panner.rolloffFactor = 1;
+    // panner.coneInnerAngle = 360;
+    // panner.coneOuterAngle = 0;
+    // panner.coneOuterGain = 0;
+    // panner.setOrientation(1,0,0);
+    this.panner = panner;
+    var listener = context.listener;
     var request = new XMLHttpRequest();
     request.open('GET', url, true);
     request.responseType = 'arraybuffer';
-
+    //listener.setPosition(window.innerWidth/2, window.innerHeight/2, 0);
     // Decode asynchronously
     request.onload = (function () {
       context.decodeAudioData(request.response, (function (buffer) {
         //audioBuffer = buffer;
         source = context.createBufferSource(); // creates a sound source
         source.buffer = buffer; // tell the source which sound to play
-
+        source.loop = true;
         source.connect(analyser);
+        analyser.connect(this.panner);
 
-        this.analyser = analyser;
+        //source.connect(analyser);
 
         // this.visualize();
 
-        source.connect(context.destination); // connect the source to the context's destination (the speakers)
+        this.panner.connect(context.destination); // connect the source to the context's destination (the speakers)
         source.start(0);
+        this.analyser = analyser;
         callback(null);
       }).bind(this), function (error) {
         callback(error);
@@ -5568,6 +5582,14 @@ var AudioProcessing = (function () {
 
       average = values / length;
       return average;
+    }
+  }, {
+    key: 'positionPanner',
+    value: function positionPanner(xPos, yPos, zPos) {
+      var x = -20 * (window.innerWidth / 2 - xPos) / (window.innerWidth / 2);
+      var y = -20 * (window.innerHeight / 2 - yPos) / (window.innerWidth / 2);
+      //console.log(x, y);
+      this.panner.setPosition(x, y, zPos);
     }
   }, {
     key: 'visualize',
@@ -5638,6 +5660,11 @@ var AudioContextManager = (function () {
     key: "getVolume",
     value: function getVolume(id) {
       return this.sounds[id].getVolume();
+    }
+  }, {
+    key: "positionPanner",
+    value: function positionPanner(id, xPos, yPos, zPos) {
+      this.sounds[id].positionPanner(xPos, yPos, zPos);
     }
 
     // processSound(){
@@ -5711,27 +5738,19 @@ var BaseMap = _react2['default'].createClass({
 			},
 			selected: null,
 			mapLoaded: false,
-			dataLoadedToMap: false };
+			dataLoadedToMap: false,
+			zoom: 12 };
 	},
-	// initSitios(sitios){
-	// 	var sit = sitios.map(function(obj, index){
-	// 		obj.properties.tempId = index;
-	// 		if(obj.properties.sonidoUrl){
-	// 			console.log(" has sound "+ obj.properties.sonidoUrl);
-	// 			this.audioContext.addSound(index, obj.properties.sonidoUrl);
-	// 			obj.properties.hasSound = true;
-	// 		} else {
-	// 			obj.properties.hasSound = false;
-	// 		}
-	// 		return obj;
-	// 	}.bind(this));
-	// 	this.setState({sitios: sit});
-	// },
+
 	updatePixelCoords: function updatePixelCoords() {
+		var zoom = this.map.getZoom();
 		if (this.props.sitios != null && this.state.mapLoaded) {
 			var sit = this.props.sitios.map((function (obj, index) {
 
 				obj.properties.screenCoords = this.map.project({ lat: obj.geometry.coordinates[1], lng: obj.geometry.coordinates[0] });
+				if (obj.properties.hasSound) {
+					this.props.audioContext.positionPanner(index, obj.properties.screenCoords.x, obj.properties.screenCoords.y, 18 - zoom);
+				}
 				return obj;
 			}).bind(this));
 			this.setState({ sitios: sit }, this.renderCanvas);
@@ -5758,6 +5777,8 @@ var BaseMap = _react2['default'].createClass({
 			this.ctx.closePath();
 			this.ctx.fill();
 			if (this.props.sitios[i].properties.hasSound) {
+
+				//
 				vol = this.props.audioContext.getVolume(i);
 				//console.log(vol);
 				outerRad = outerRad + vol;
@@ -5874,6 +5895,11 @@ var BaseMap = _react2['default'].createClass({
 					}
 				}).bind(this));
 			}).bind(this));
+			this.map.on('move', (function (e) {
+				this.updatePixelCoords();
+				// console.log("moving");
+				// console.log(this.map.getBounds());
+			}).bind(this));
 		}
 	},
 	componentDidMount: function componentDidMount() {
@@ -5898,7 +5924,7 @@ var BaseMap = _react2['default'].createClass({
 			//this.map.on('moveend', this.addGeoJSON);
 			setTimeout((function () {
 				this.map.flyTo({
-					zoom: 11,
+					zoom: this.state.zoom,
 					pitch: 45,
 					speed: 1.2,
 					bearing: 100,
@@ -5907,11 +5933,6 @@ var BaseMap = _react2['default'].createClass({
 						return t;
 					}
 				});
-				this.map.on('move', (function (e) {
-					this.updatePixelCoords();
-					// console.log("moving");
-					// console.log(this.map.getBounds());
-				}).bind(this));
 			}).bind(this), 400);
 			setTimeout((function () {
 				this.setState({ mapLoaded: true }, this.addGeoJSON);
@@ -6499,9 +6520,12 @@ var Intro = _react2["default"].createClass({
 			marginTop: "20px"
 		};
 
+		var introContainerStyle = {
+			zIndex: 50
+		};
 		return _react2["default"].createElement(
 			"div",
-			null,
+			{ style: introContainerStyle },
 			_react2["default"].createElement(
 				"video",
 				{ id: "vid", style: videoStyle, autoPlay: true },
@@ -6579,6 +6603,7 @@ var _AudioContextManager = require('./AudioContextManager');
 
 var _AudioContextManager2 = _interopRequireDefault(_AudioContextManager);
 
+var ReactScriptLoaderMixin = require('react-script-loader').ReactScriptLoaderMixin;
 // ne:
 // lat: 4.838602784913988
 // lng: -73.91643370363467
@@ -6598,11 +6623,26 @@ var colorArray = [
 var Main = _react2['default'].createClass({
   displayName: 'Main',
 
+  mixins: [ReactScriptLoaderMixin],
   getInitialState: function getInitialState() {
+
+    return { bounds: null, mapLoaded: false, scriptLoaded: false, sitios: null, color: "#ff3366", categorias: null, outline: null };
+  },
+  getScriptURL: function getScriptURL() {
+    return 'https://api.tiles.mapbox.com/mapbox-gl-js/v0.10.0/mapbox-gl.js';
+  },
+  // ReactScriptLoaderMixin calls this function when the script has loaded
+  // successfully.
+  onScriptLoaded: function onScriptLoaded() {
     var sw = new mapboxgl.LngLat(-74.16126694164626, 4.5155410235603455);
     var ne = new mapboxgl.LngLat(-73.91643370363467, 4.838602784913988);
     var bounds = new mapboxgl.LngLatBounds(sw, ne);
-    return { bounds: bounds, mapLoaded: false, sitios: null, color: "#ff3366", categorias: null, outline: null };
+    this.setState({ bounds: bounds, scriptLoaded: true });
+  },
+
+  // ReactScriptLoaderMixin calls this function when the script has failed to load.
+  onScriptError: function onScriptError() {
+    console.log("error loading mapboxgl");
   },
   showElements: function showElements() {
     this.setState({ mapLoaded: true });
@@ -6656,13 +6696,19 @@ var Main = _react2['default'].createClass({
   },
   render: function render() {
     var mapElements = [];
-    if (this.state.sitios != null) {
-      mapElements.push(_react2['default'].createElement(_BaseMap2['default'], { bounds: this.state.bounds, outline: this.state.outline, audioContext: this.audioContext, sitios: this.state.sitios, onMapLoaded: this.showElements }));
+    if (this.state.scriptLoaded == true && this.state.sitios != null) {
+      mapElements.push(_react2['default'].createElement(_BaseMap2['default'], { bounds: this.state.bounds, outline: this.state.outline, audioContext: this.audioContext, sitios: this.state.sitios, mapLoaded: this.state.mapLoaded, onMapLoaded: this.showElements }));
     }
     if (this.state.mapLoaded) {
       mapElements.push(_react2['default'].createElement(_Navigation2['default'], { setBounds: this.setBounds, setOutline: this.setOutline, categorias: this.state.categorias, color: this.state.color }));
     }
-
+    var containerStyle = {
+      width: "100%",
+      height: "100%",
+      position: "fixed",
+      top: "0px",
+      left: "0px"
+    };
     return _react2['default'].createElement(
       'div',
       null,
@@ -6675,7 +6721,7 @@ var Main = _react2['default'].createClass({
 exports['default'] = Main;
 module.exports = exports['default'];
 
-},{"./AudioContextManager":19,"./BaseMap":20,"./Ingresar":25,"./Navigation":29,"react":"react","superagent":56}],29:[function(require,module,exports){
+},{"./AudioContextManager":19,"./BaseMap":20,"./Ingresar":25,"./Navigation":29,"react":"react","react-script-loader":49,"superagent":56}],29:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {

@@ -6,6 +6,7 @@ import HexGrid from './HexGrid'
 import InfoDetail from './InfoDetail'
 import AudioContextManager from './AudioContextManager'
 
+
 function drawHex(ctx, coords, rad){
 	
 		var angle;
@@ -20,6 +21,7 @@ function drawHex(ctx, coords, rad){
 }
 
 var BaseMap = React.createClass({
+	
 	getInitialState(){
 		return({coords: {
 	         lat: 4.597,
@@ -27,27 +29,20 @@ var BaseMap = React.createClass({
 	     }, 
 	     selected: null,
 	     mapLoaded: false,
-	     dataLoadedToMap: false});
+	     dataLoadedToMap: false,
+	 	zoom: 12});
 	},
-	// initSitios(sitios){
-	// 	var sit = sitios.map(function(obj, index){
-	// 		obj.properties.tempId = index;
-	// 		if(obj.properties.sonidoUrl){
-	// 			console.log(" has sound "+ obj.properties.sonidoUrl);
-	// 			this.audioContext.addSound(index, obj.properties.sonidoUrl);
-	// 			obj.properties.hasSound = true;
-	// 		} else {
-	// 			obj.properties.hasSound = false;
-	// 		}
-	// 		return obj;
-	// 	}.bind(this));
-	// 	this.setState({sitios: sit});
-	// },
+	
+
 	updatePixelCoords(){
+		var zoom = this.map.getZoom();
 	if(this.props.sitios != null && this.state.mapLoaded){
 		var sit = this.props.sitios.map(function(obj, index){
 			
 			obj.properties.screenCoords = this.map.project({lat: obj.geometry.coordinates[1], lng: obj.geometry.coordinates[0]});
+			if(obj.properties.hasSound){
+				this.props.audioContext.positionPanner(index, obj.properties.screenCoords.x, obj.properties.screenCoords.y, 18-zoom);
+			}
 			return obj;
 		}.bind(this));
 			this.setState({sitios: sit}, this.renderCanvas);
@@ -75,6 +70,9 @@ var BaseMap = React.createClass({
 			this.ctx.closePath();
 			this.ctx.fill();
 			if(this.props.sitios[i].properties.hasSound){
+				
+				
+				//
 				vol = this.props.audioContext.getVolume(i);
 				//console.log(vol);
 				outerRad = outerRad + vol;
@@ -195,7 +193,11 @@ var BaseMap = React.createClass({
 			         }
 			      }.bind(this));
   				}.bind(this));
-
+			 this.map.on('move', function(e) {
+					this.updatePixelCoords();
+					// console.log("moving");
+					// console.log(this.map.getBounds());
+				}.bind(this));
 		
 		
 
@@ -224,7 +226,7 @@ var BaseMap = React.createClass({
 			//this.map.on('moveend', this.addGeoJSON);
 			 setTimeout(function(){
 				this.map.flyTo({
-					zoom: 11,
+					zoom: this.state.zoom,
 					pitch: 45,
 					speed: 1.2, 
 					bearing: 100,
@@ -233,11 +235,7 @@ var BaseMap = React.createClass({
 		    			return t;
 		  			}
 				});
-				this.map.on('move', function(e) {
-					this.updatePixelCoords();
-					// console.log("moving");
-					// console.log(this.map.getBounds());
-				}.bind(this));
+				
 			}.bind(this), 400);
 			setTimeout(function(){
 				this.setState({mapLoaded: true}, this.addGeoJSON);

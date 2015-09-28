@@ -66,8 +66,11 @@ componentDidMount(){
 		marginTop: "20px"
 	}
 	
+	var introContainerStyle={
+		zIndex: 50
+	}
   	  return( 
-  	  	<div>
+  	  	<div style= {introContainerStyle}>
   	  		<video id="vid" style={videoStyle} autoPlay>
 			  <source src="./video/enterprise-loop.mp4" type="video/mp4"/>
 			Your browser does not support the video tag.

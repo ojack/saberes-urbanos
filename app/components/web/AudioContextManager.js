@@ -18,6 +18,10 @@ class AudioContextManager {
   getVolume(id){
     return this.sounds[id].getVolume();
   }
+  positionPanner(id, xPos, yPos, zPos){
+    this.sounds[id].positionPanner(xPos, yPos, zPos);
+
+  }
   // processSound(){
   //   var vol = this.sound.getVolume();
   //   console.log(vol);

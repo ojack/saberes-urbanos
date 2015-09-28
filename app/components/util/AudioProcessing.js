@@ -10,27 +10,40 @@ class AudioProcessing {
   constructor(url, context, callback){
 //window.AudioContext = window.AudioContext||window.webkitAudioContext;
     var analyser = context.createAnalyser();
+   var panner = context.createPanner();
+//   panner.panningModel = 'HRTF';
+// panner.distanceModel = 'inverse';
+// panner.refDistance = 1;
+// panner.maxDistance = 10000;
+// // panner.rolloffFactor = 1;
+// panner.coneInnerAngle = 360;
+// panner.coneOuterAngle = 0;
+// panner.coneOuterGain = 0;
+// panner.setOrientation(1,0,0);
+this.panner = panner;
+    var listener = context.listener;
     var request = new XMLHttpRequest();
   request.open('GET', url, true);
   request.responseType = 'arraybuffer';
-
+  //listener.setPosition(window.innerWidth/2, window.innerHeight/2, 0);
   // Decode asynchronously
   request.onload = function() {
     context.decodeAudioData(request.response, function(buffer) {
       //audioBuffer = buffer;
      source = context.createBufferSource(); // creates a sound source
   source.buffer = buffer;                    // tell the source which sound to play
-   
-  source.connect(analyser);
-   
+  source.loop = true;
+  source.connect(analyser)
+  analyser.connect(this.panner);
 
-    this.analyser = analyser;
+  //source.connect(analyser);
    
     // this.visualize();
 
 
-  source.connect(context.destination);       // connect the source to the context's destination (the speakers)
+  this.panner.connect(context.destination);       // connect the source to the context's destination (the speakers)
   source.start(0); 
+    this.analyser = analyser;
   callback(null); 
     }.bind(this),  function(error) {
         callback(error);
@@ -71,6 +84,12 @@ class AudioProcessing {
         average = values / length;
         return average;
    
+  }
+  positionPanner(xPos, yPos, zPos) {
+    var x = -20*(window.innerWidth/2-xPos)/(window.innerWidth/2);
+    var y = -20*(window.innerHeight/2-yPos)/(window.innerWidth/2);
+    //console.log(x, y);
+    this.panner.setPosition(x,y, zPos);
   }
   visualize(){
      console.log("visualizing");

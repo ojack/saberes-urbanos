@@ -25,7 +25,7 @@ var Web = React.createClass({
   render() {
   	switch(this.state.step){
   		case 0: 
-       	 return <Intro nextStep={this.nextStep}/>
+       	 return (<Intro nextStep={this.nextStep}/>)
        	case 1: 
        		 return <Main nextStep={this.nextStep} />
    	}

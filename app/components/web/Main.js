@@ -3,7 +3,8 @@ import BaseMap from './BaseMap';
 import Navigation from './Navigation';
 import Ingresar from './Ingresar'
 import request from 'superagent';
-import AudioContextManager from './AudioContextManager'
+import AudioContextManager from './AudioContextManager';
+var ReactScriptLoaderMixin = require('react-script-loader').ReactScriptLoaderMixin;
 // ne:
 // lat: 4.838602784913988
 // lng: -73.91643370363467
@@ -25,12 +26,27 @@ var colorArray = [
     ];
 
 var Main = React.createClass({
+  mixins: [ReactScriptLoaderMixin],
 getInitialState(){
-	var sw = new mapboxgl.LngLat(-74.16126694164626, 4.5155410235603455);
-	var ne = new mapboxgl.LngLat( -73.91643370363467, 4.838602784913988);
-	var bounds = new mapboxgl.LngLatBounds(sw, ne);
-		return ({bounds: bounds, mapLoaded: false, sitios: null, color: "#ff3366", categorias: null, outline: null});
+	
+		return ({bounds: null, mapLoaded: false, scriptLoaded: false, sitios: null, color: "#ff3366", categorias: null, outline: null});
 },
+getScriptURL: function() {
+        return 'https://api.tiles.mapbox.com/mapbox-gl-js/v0.10.0/mapbox-gl.js';
+    },
+    // ReactScriptLoaderMixin calls this function when the script has loaded
+    // successfully.
+    onScriptLoaded: function() {
+        var sw = new mapboxgl.LngLat(-74.16126694164626, 4.5155410235603455);
+  var ne = new mapboxgl.LngLat( -73.91643370363467, 4.838602784913988);
+  var bounds = new mapboxgl.LngLatBounds(sw, ne);
+      this.setState({bounds: bounds, scriptLoaded: true});
+    },
+
+    // ReactScriptLoaderMixin calls this function when the script has failed to load.
+    onScriptError: function() {
+        console.log("error loading mapboxgl");
+    },
 showElements(){
 	this.setState({mapLoaded: true});
 },
@@ -87,13 +103,19 @@ showElements(){
   },
   render() {
   	var mapElements = [];
-    if(this.state.sitios!=null){
-      mapElements.push( <BaseMap bounds={this.state.bounds} outline={this.state.outline} audioContext={this.audioContext} sitios={this.state.sitios} onMapLoaded={this.showElements}/>);
+    if(this.state.scriptLoaded==true && this.state.sitios!=null){
+      mapElements.push( <BaseMap bounds={this.state.bounds} outline={this.state.outline} audioContext={this.audioContext} sitios={this.state.sitios} mapLoaded={this.state.mapLoaded} onMapLoaded={this.showElements}/>);
     }
   	if(this.state.mapLoaded){
   		mapElements.push(<Navigation setBounds={this.setBounds} setOutline={this.setOutline} categorias={this.state.categorias} color={this.state.color}/>);
   	}
-
+      var containerStyle = {
+        width: "100%",
+        height: "100%",
+        position: "fixed",
+        top: "0px",
+        left: "0px"
+      }
   	  return(<div>
   	  		
   	  			{mapElements}
