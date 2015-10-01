@@ -6,11 +6,15 @@ var Categorias = React.createClass({
       selected: null
     }
   },
-
+  handleClick(key){
+    console.log(key);
+    this.props.getCategoria(key);
+   },
   render() {
    var divStyle = {
       marginBottom: "30px"
    }
+
     var categorias = [];
 	 for(var key in this.props.categorias){
    // console.log(this.props.categorias[key]);
@@ -23,9 +27,9 @@ var Categorias = React.createClass({
     }
     style.fontSize = fontSize + "px";
     //console.log(style);
-    categorias.push(<div style={style}>{key}</div>);
+    categorias.push(<div onClick={this.handleClick.bind(null, key)} style={style}>{key}</div>);
    }
-  	return (<div style={divStyle}>
+  	return (<div style={divStyle} >
              
              {categorias}
             </div>);

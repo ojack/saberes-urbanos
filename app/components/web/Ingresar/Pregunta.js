@@ -1,4 +1,5 @@
 import React from 'react';
+import IngresarHex from './IngresarHex';
 
 var Pregunta = React.createClass({
  getInitialState() {
@@ -6,25 +7,39 @@ var Pregunta = React.createClass({
       value : this.props.value
     }
   },
-
+  setValue(e){
+    console.log("value is "+e.target.value);
+    this.setState({value: e.target.value});
+  },
   render() {
-	var shadeStyle = {
-		position: "fixed",
-		left: "0px",
-		top: "0px",
-		width: "100%",
-		height: "100%",
-		backgroundColor: "rgba(0, 0, 0, 0.4)"
-	};
+    console.log(this.props);
+	
+
+  var data = {
+    attr: this.props.attr,
+    value: this.state.value
+  }
+  var width = 245;
+  var height = 283;
+ var style = {
+    color: this.props.primaryColor
+ }
+   var hexContents = (<div><p style={style} className="ingresar-primary-heading">Responde la pregunta:</p><p className="ingresar-secondary-heading">¿Que vale la pena conocer de tu barrio?</p></div>);
+
   	return (
-  		<div className="row">
+  		<div className="row" >
   			<div className="six columns">
-  				<h3>Responde la pregunta:</h3>
-  				<h4>Que vale la pena conocer de tu barrio?</h4>
-  			</div>
+         
+            <IngresarHex contents={hexContents} primaryColor={this.props.primaryColor} width={width} height={height}/>
+        
+            
+          
+        </div>
   			<div className="six columns">
-  				<textarea className="u-full-width" placeholder="Respuesta..." maxLength="200" id="exampleMessage"></textarea>
+  				<textarea onChange={this.setValue} value={this.state.value} className="u-full-width" placeholder="Respuesta..." maxLength="200" id="exampleMessage"></textarea>
   			</div>
+        <button className="ingresar-continuar" onClick={this.props.nextStep.bind(null, data)}> Continuar </button>
+        <h5 className="ingresar-cancelar" onClick={this.props.cancelar}> Cancelar </h5>
   		</div>
   	);
   	// switch(this.state.step){

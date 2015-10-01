@@ -69,6 +69,23 @@ var Navigation = React.createClass({
                 //this.setState({barrios: res.body});
            }.bind(this));
     },
+    
+    handleKeyUp(e){
+    e.preventDefault();
+    if(e.keyCode == 13){
+      console.log("handling key up");
+      console.log(e.target.value);
+      this.props.searchSitios(e.target.value);
+          //var query_string = "https://dev.virtualearth.net/REST/v1/Locations/1%20Microsoft%20Way%20Redmond%20WA%2098052?key=ArZ9iodclv6caCIXL7qFS8KBePoxP2a4etk2fVoy9Uw_BQEP3NEO7l_yNemfqQE2";
+      //
+    }
+  },
+  handleBlur(e){
+    console.log(e.target.value);
+    this.props.searchSitios(e.target.value);
+    //alert();
+    //this.geocode();
+  },
   render() {
     // 
    
@@ -92,8 +109,8 @@ var Navigation = React.createClass({
            // console.log(barrioOptions);
         }
   	  return(<form id="navigator">
-            <Categorias color={this.props.color} categorias={this.props.categorias}/>
-  	  			<input className="u-full-width" type="text" placeholder="Buscar.." id="exampleEmailInput"/>
+            <Categorias color={this.props.color} categorias={this.props.categorias} getCategoria={this.props.getCategoria}/>
+  	  			<input className="u-full-width" type="text" placeholder="Buscar.." id="exampleEmailInput" onChange={this.handleChange} onKeyUp={this.handleKeyUp} onBlur={this.handleBlur}/>
   	  			
 			   
               <Select
