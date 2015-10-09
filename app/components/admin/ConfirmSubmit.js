@@ -11,7 +11,7 @@ function upload_file(file, signed_request, url, callback){
         }
     };
     xhr.onerror = function() {
-        callback("couldnt upload file", null);
+        callback("couldn't upload file", null);
     };
     xhr.send(file);
 }
@@ -47,7 +47,7 @@ var ConfirmSubmit = React.createClass({
                r.send({sonido_name: sonido.name})
                .send({sonido_type: sonido.type});
               }
-              this.setState({confirmationState: "loading", statusMessage: ["adding to database"]});
+              this.setState({confirmationState: "loading", statusMessage: ["adicionando a la base de datos"]});
 	           this.setState({numCallbacks: numCallbacks});
 	           r.end(function(err, res){
                 this.setState({numCallbacks: this.state.numCallbacks-1});
@@ -154,13 +154,13 @@ var ConfirmSubmit = React.createClass({
                    <h3> Confirmar </h3>
                   <ul>{submitData}</ul>
 
-                  <button onClick={this.props.hideSubmit}>Keep editing </button>
-                  <button style={buttonStyle} onClick={this.handleSubmit}>Submit</button>
+                  <button onClick={this.props.hideSubmit}>continuar editando </button>
+                  <button style={buttonStyle} onClick={this.handleSubmit}>Enviar</button>
                 </div>);
       } else if (this.state.confirmationState == "loading") {
         console.log(" callbacks "+ this.state.numCallbacks);
         if(this.state.numCallbacks <= 0){
-          popupContents = (<h1>Success!</h1>)
+          popupContents = (<h1>!Proceso Exitoso!</h1>)
           setTimeout(function(){location.reload();}, 500);
         } else {
           var status = this.state.statusMessage.map(function(string){
@@ -168,7 +168,7 @@ var ConfirmSubmit = React.createClass({
               return <div>{string}</div>;
           });
           popupContents = (<div>
-            <div className="loader">Loading...</div>
+            <div className="loader">Cargando...</div>
             <div>{status}</div>
             </div>);
         }

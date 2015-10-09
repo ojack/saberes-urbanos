@@ -450,12 +450,12 @@ var AddSite = _react2['default'].createClass({
                 _react2['default'].createElement(
                     Row,
                     null,
-                    _react2['default'].createElement('input', { className: 'btn btn-default', onClick: this.resetForm, type: 'reset', defaultValue: 'Reset' }),
+                    _react2['default'].createElement('input', { className: 'btn btn-default', onClick: this.resetForm, type: 'reset', defaultValue: 'Borar' }),
                     ' ',
                     _react2['default'].createElement(
                         'button',
                         { type: 'button', className: 'btn btn-primary', onClick: this.submitForm },
-                        'Submit '
+                        'Enviar '
                     )
                 )
             ),
@@ -656,7 +656,7 @@ function upload_file(file, signed_request, url, callback) {
     }
   };
   xhr.onerror = function () {
-    callback("couldnt upload file", null);
+    callback("couldn't upload file", null);
   };
   xhr.send(file);
 }
@@ -689,7 +689,7 @@ var ConfirmSubmit = _react2['default'].createClass({
       var sonido = this.props.submitData.sonido[0];
       r.send({ sonido_name: sonido.name }).send({ sonido_type: sonido.type });
     }
-    this.setState({ confirmationState: "loading", statusMessage: ["adding to database"] });
+    this.setState({ confirmationState: "loading", statusMessage: ["adicionando a la base de datos"] });
     this.setState({ numCallbacks: numCallbacks });
     r.end((function (err, res) {
       this.setState({ numCallbacks: this.state.numCallbacks - 1 });
@@ -804,12 +804,12 @@ var ConfirmSubmit = _react2['default'].createClass({
         _react2['default'].createElement(
           'button',
           { onClick: this.props.hideSubmit },
-          'Keep editing '
+          'continuar editando '
         ),
         _react2['default'].createElement(
           'button',
           { style: buttonStyle, onClick: this.handleSubmit },
-          'Submit'
+          'Enviar'
         )
       );
     } else if (this.state.confirmationState == "loading") {
@@ -818,7 +818,7 @@ var ConfirmSubmit = _react2['default'].createClass({
         popupContents = _react2['default'].createElement(
           'h1',
           null,
-          'Success!'
+          '!Proceso Exitoso!'
         );
         setTimeout(function () {
           location.reload();
@@ -838,7 +838,7 @@ var ConfirmSubmit = _react2['default'].createClass({
           _react2['default'].createElement(
             'div',
             { className: 'loader' },
-            'Loading...'
+            'Cargando...'
           ),
           _react2['default'].createElement(
             'div',
