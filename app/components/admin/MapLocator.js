@@ -2,9 +2,9 @@ import React from 'react';
 import Formsy from 'formsy-react';
 import Geocode from './Geocode';
 
-var ReactScriptLoaderModule = require('react-script-loader');
-var ReactScriptLoaderMixin= ReactScriptLoaderModule.ReactScriptLoaderMixin;
-var ReactScriptLoader= ReactScriptLoaderModule.ReactScriptLoader;
+// var ReactScriptLoaderModule = require('react-script-loader');
+// var ReactScriptLoaderMixin= ReactScriptLoaderModule.ReactScriptLoaderMixin;
+// var ReactScriptLoader= ReactScriptLoaderModule.ReactScriptLoader;
 
 
 
@@ -19,7 +19,8 @@ var scriptURL = "https://maps.googleapis.com/maps/api/js?key="+API_KEY;
 //         ReactScriptLoader.triggerOnScriptLoaded(scriptURL);
 //     };
 var MapLocator = React.createClass({
-	mixins: [Formsy.Mixin, ReactScriptLoaderMixin],
+  mixins: [Formsy.Mixin],
+	//mixins: [Formsy.Mixin, ReactScriptLoaderMixin],
 	// componentWillReceiveProps(nextProps){
 	// 	if(nextProps.location != this.props.location){
 	// 		this.map.flyTo({center: [nextProps.location.lat, nextProps.location.lng], zoom: 16});
@@ -29,16 +30,16 @@ var MapLocator = React.createClass({
 	// changeValue: function(lat, lng){
 	// 	this.setValue(event.currentTarget.value);
 	// },
-	 getScriptURL: function() {
-        return scriptURL;
-    },
-    // Ensure that onScriptLoaded is deferred until the
-    // ReactScriptLoader.triggerOnScriptLoaded() call above is made in
-    // initializeMaps().
-    deferOnScriptLoaded: function() {
-       //return true;
-      return true;
-    },
+	 // getScriptURL: function() {
+  //       return scriptURL;
+  //   },
+  //   // Ensure that onScriptLoaded is deferred until the
+  //   // ReactScriptLoader.triggerOnScriptLoaded() call above is made in
+  //   // initializeMaps().
+  //   deferOnScriptLoaded: function() {
+  //      //return true;
+  //     return true;
+  //   },
 
     onScriptLoaded: function() {
         // Render a map with the center point given by the component's lat and lng
@@ -46,7 +47,7 @@ var MapLocator = React.createClass({
         console.log("script loaded");
         console.log(google.maps);
          console.log(this.state.componentLoaded);
-        if(google.maps && this.state.componentLoaded){
+       // if(google.maps && this.state.componentLoaded){
 
         //[this.getValue().lng, this.getValue().lat]
         this.map = new google.maps.Map(document.getElementById('map'), {
@@ -69,10 +70,10 @@ var MapLocator = React.createClass({
     		this.setState({bounds: bounds});
   		}.bind(this));
   		this.geocoder = new google.maps.Geocoder();
-  		} else {
-        console.log("retrying");
-        setTimeout(this.scriptLoaded, 100);
-      }
+  		// } else {
+    //     console.log("retrying");
+    //     setTimeout(this.scriptLoaded, 100);
+    //   }
      
     },
      onScriptError: function() {
@@ -94,10 +95,11 @@ var MapLocator = React.createClass({
 		//console.log("calling component mount");
 		//console.log(this.props);
     this.setState({componentLoaded: true});
-    setTimeout(function(){
-      ReactScriptLoader.triggerOnScriptLoaded(scriptURL);
+    this.onScriptLoaded();
+  //   setTimeout(function(){
+  //     ReactScriptLoader.triggerOnScriptLoaded(scriptURL);
 		
-  }.bind(this), 600);
+  // }.bind(this), 600);
 		
 	},
 	componentWillReceiveProps(nextProps){

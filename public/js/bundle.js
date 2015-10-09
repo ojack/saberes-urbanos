@@ -1423,9 +1423,9 @@ var _Geocode = require('./Geocode');
 
 var _Geocode2 = _interopRequireDefault(_Geocode);
 
-var ReactScriptLoaderModule = require('react-script-loader');
-var ReactScriptLoaderMixin = ReactScriptLoaderModule.ReactScriptLoaderMixin;
-var ReactScriptLoader = ReactScriptLoaderModule.ReactScriptLoader;
+// var ReactScriptLoaderModule = require('react-script-loader');
+// var ReactScriptLoaderMixin= ReactScriptLoaderModule.ReactScriptLoaderMixin;
+// var ReactScriptLoader= ReactScriptLoaderModule.ReactScriptLoader;
 
 var API_KEY = "AIzaSyDSAaqtPycMHBfGlBjG-q-UzKm6T-YDHhA";
 
@@ -1440,7 +1440,8 @@ var scriptURL = "https://maps.googleapis.com/maps/api/js?key=" + API_KEY;
 var MapLocator = _react2['default'].createClass({
   displayName: 'MapLocator',
 
-  mixins: [_formsyReact2['default'].Mixin, ReactScriptLoaderMixin],
+  mixins: [_formsyReact2['default'].Mixin],
+  //mixins: [Formsy.Mixin, ReactScriptLoaderMixin],
   // componentWillReceiveProps(nextProps){
   // 	if(nextProps.location != this.props.location){
   // 		this.map.flyTo({center: [nextProps.location.lat, nextProps.location.lng], zoom: 16});
@@ -1450,16 +1451,16 @@ var MapLocator = _react2['default'].createClass({
   // changeValue: function(lat, lng){
   // 	this.setValue(event.currentTarget.value);
   // },
-  getScriptURL: function getScriptURL() {
-    return scriptURL;
-  },
-  // Ensure that onScriptLoaded is deferred until the
-  // ReactScriptLoader.triggerOnScriptLoaded() call above is made in
-  // initializeMaps().
-  deferOnScriptLoaded: function deferOnScriptLoaded() {
-    //return true;
-    return true;
-  },
+  // getScriptURL: function() {
+  //       return scriptURL;
+  //   },
+  //   // Ensure that onScriptLoaded is deferred until the
+  //   // ReactScriptLoader.triggerOnScriptLoaded() call above is made in
+  //   // initializeMaps().
+  //   deferOnScriptLoaded: function() {
+  //      //return true;
+  //     return true;
+  //   },
 
   onScriptLoaded: function onScriptLoaded() {
     // Render a map with the center point given by the component's lat and lng
@@ -1467,33 +1468,33 @@ var MapLocator = _react2['default'].createClass({
     console.log("script loaded");
     console.log(google.maps);
     console.log(this.state.componentLoaded);
-    if (google.maps && this.state.componentLoaded) {
+    // if(google.maps && this.state.componentLoaded){
 
-      //[this.getValue().lng, this.getValue().lat]
-      this.map = new google.maps.Map(document.getElementById('map'), {
-        center: { lat: this.getValue().lat, lng: this.getValue().lng },
-        zoom: 13,
-        streetViewControl: false
-      });
-      google.maps.event.addListenerOnce(this.map, 'idle', (function () {
-        var bounds = this.map.getBounds();
-        console.log("bounds are");
-        console.log(bounds);
-        this.setState({ scriptLoaded: true, bounds: bounds });
-      }).bind(this));
+    //[this.getValue().lng, this.getValue().lat]
+    this.map = new google.maps.Map(document.getElementById('map'), {
+      center: { lat: this.getValue().lat, lng: this.getValue().lng },
+      zoom: 13,
+      streetViewControl: false
+    });
+    google.maps.event.addListenerOnce(this.map, 'idle', (function () {
+      var bounds = this.map.getBounds();
+      console.log("bounds are");
+      console.log(bounds);
+      this.setState({ scriptLoaded: true, bounds: bounds });
+    }).bind(this));
 
-      this.map.addListener('center_changed', (function () {
-        var coords = this.map.getCenter();
-        console.log(coords);
-        this.setValue({ lat: coords.lat(), lng: coords.lng() });
-        var bounds = this.map.getBounds();
-        this.setState({ bounds: bounds });
-      }).bind(this));
-      this.geocoder = new google.maps.Geocoder();
-    } else {
-      console.log("retrying");
-      setTimeout(this.scriptLoaded, 100);
-    }
+    this.map.addListener('center_changed', (function () {
+      var coords = this.map.getCenter();
+      console.log(coords);
+      this.setValue({ lat: coords.lat(), lng: coords.lng() });
+      var bounds = this.map.getBounds();
+      this.setState({ bounds: bounds });
+    }).bind(this));
+    this.geocoder = new google.maps.Geocoder();
+    // } else {
+    //     console.log("retrying");
+    //     setTimeout(this.scriptLoaded, 100);
+    //   }
   },
   onScriptError: function onScriptError() {
     // Show the user an error message.
@@ -1514,9 +1515,11 @@ var MapLocator = _react2['default'].createClass({
     //console.log("calling component mount");
     //console.log(this.props);
     this.setState({ componentLoaded: true });
-    setTimeout((function () {
-      ReactScriptLoader.triggerOnScriptLoaded(scriptURL);
-    }).bind(this), 600);
+    this.onScriptLoaded();
+    //   setTimeout(function(){
+    //     ReactScriptLoader.triggerOnScriptLoaded(scriptURL);
+
+    // }.bind(this), 600);
   },
   componentWillReceiveProps: function componentWillReceiveProps(nextProps) {
     console.log(nextProps);
@@ -1559,7 +1562,7 @@ var MapLocator = _react2['default'].createClass({
 exports['default'] = MapLocator;
 module.exports = exports['default'];
 
-},{"./Geocode":11,"formsy-react":76,"react":"react","react-script-loader":271}],15:[function(require,module,exports){
+},{"./Geocode":11,"formsy-react":76,"react":"react"}],15:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
