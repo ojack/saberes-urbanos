@@ -360,7 +360,7 @@ var AddSite = _react2['default'].createClass({
             ),
             _react2['default'].createElement(
                 _formsyReact2['default'].Form,
-                { className: formClassName, onSubmit: this.updateData, onKeyUp: this.handleKeyUp, ref: 'form' },
+                { className: formClassName, onSubmit: this.updateData, onChange: this.updateData, onKeyUp: this.updateData, ref: 'form' },
                 _react2['default'].createElement(
                     'fieldset',
                     null,
@@ -447,7 +447,7 @@ var AddSite = _react2['default'].createClass({
                 _react2['default'].createElement(
                     Row,
                     null,
-                    _react2['default'].createElement('input', { type: 'button', className: 'btn btn-default', onClick: this.resetForm, type: 'reset', defaultValue: 'Reset' }),
+                    _react2['default'].createElement('input', { className: 'btn btn-default', onClick: this.resetForm, type: 'reset', defaultValue: 'Reset' }),
                     ' ',
                     _react2['default'].createElement(
                         'button',
@@ -1426,14 +1426,14 @@ var ReactScriptLoader = ReactScriptLoaderModule.ReactScriptLoader;
 
 var API_KEY = "AIzaSyDSAaqtPycMHBfGlBjG-q-UzKm6T-YDHhA";
 
-var scriptURL = "https://maps.googleapis.com/maps/api/js?key=" + API_KEY + "&callback=initMap";
+//var scriptURL = "https://maps.googleapis.com/maps/api/js?key="+API_KEY+"&callback=initMap";
 
-//var scriptURL = "https://maps.googleapis.com/maps/api/js?key="+API_KEY;
-window.initMap = function () {
-  console.log("init map called");
-  // This triggers the onScriptLoaded method call on all mounted Map components.
-  ReactScriptLoader.triggerOnScriptLoaded(scriptURL);
-};
+var scriptURL = "https://maps.googleapis.com/maps/api/js?key=" + API_KEY;
+// window.initMap = function() {
+//       console.log("init map called");
+//        // This triggers the onScriptLoaded method call on all mounted Map components.
+//         ReactScriptLoader.triggerOnScriptLoaded(scriptURL);
+//     };
 var MapLocator = _react2['default'].createClass({
   displayName: 'MapLocator',
 
@@ -1454,8 +1454,8 @@ var MapLocator = _react2['default'].createClass({
   // ReactScriptLoader.triggerOnScriptLoaded() call above is made in
   // initializeMaps().
   deferOnScriptLoaded: function deferOnScriptLoaded() {
-    return true;
-    //return false;
+    //return true;
+    return false;
   },
 
   onScriptLoaded: function onScriptLoaded() {

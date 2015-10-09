@@ -10,14 +10,14 @@ var ReactScriptLoader= ReactScriptLoaderModule.ReactScriptLoader;
 
 var API_KEY = "AIzaSyDSAaqtPycMHBfGlBjG-q-UzKm6T-YDHhA";
 
-var scriptURL = "https://maps.googleapis.com/maps/api/js?key="+API_KEY+"&callback=initMap";
+//var scriptURL = "https://maps.googleapis.com/maps/api/js?key="+API_KEY+"&callback=initMap";
 
-//var scriptURL = "https://maps.googleapis.com/maps/api/js?key="+API_KEY;
-window.initMap = function() {
-      console.log("init map called");
-       // This triggers the onScriptLoaded method call on all mounted Map components.
-        ReactScriptLoader.triggerOnScriptLoaded(scriptURL);
-    };
+var scriptURL = "https://maps.googleapis.com/maps/api/js?key="+API_KEY;
+// window.initMap = function() {
+//       console.log("init map called");
+//        // This triggers the onScriptLoaded method call on all mounted Map components.
+//         ReactScriptLoader.triggerOnScriptLoaded(scriptURL);
+//     };
 var MapLocator = React.createClass({
 	mixins: [Formsy.Mixin, ReactScriptLoaderMixin],
 	// componentWillReceiveProps(nextProps){
@@ -36,8 +36,8 @@ var MapLocator = React.createClass({
     // ReactScriptLoader.triggerOnScriptLoaded() call above is made in
     // initializeMaps().
     deferOnScriptLoaded: function() {
-       return true;
-      //return false;
+       //return true;
+      return false;
     },
 
     onScriptLoaded: function() {

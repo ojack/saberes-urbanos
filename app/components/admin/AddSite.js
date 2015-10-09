@@ -181,7 +181,7 @@ var AddSite = React.createClass({
                     <h1>{title}</h1>
                 </div>
               
-                <Formsy.Form className={formClassName} onSubmit={this.updateData} onKeyUp={this.handleKeyUp} ref="form">
+                <Formsy.Form className={formClassName} onSubmit={this.updateData} onChange={this.updateData} onKeyUp={this.updateData} ref="form">
 
                     <fieldset>
                         <Input
@@ -278,7 +278,7 @@ var AddSite = React.createClass({
                    
                    
                     <Row >
-                        <input type="button" className="btn btn-default" onClick={this.resetForm} type="reset" defaultValue="Reset" />
+                        <input className="btn btn-default" onClick={this.resetForm} type="reset" defaultValue="Reset" />
                         {' '}
                         <button type="button" className="btn btn-primary" onClick={this.submitForm}>Submit </button>
                     </Row>
