@@ -991,35 +991,6 @@ there.
   background-color: #ff3366;
   cursor: pointer;
 }
-.ingresar-primary-heading {
-  font-family: 'nexa_boldregular', Arial, sans-serif;
-  font-size: 1.313em;
-  text-transform: uppercase;
-  letter-spacing: 0.0em;
-}
-.ingresar-secondary-heading {
-  font-family: 'nexa_lightregular', Arial, sans-serif;
-  font-size: 1.125em;
-  text-transform: uppercase;
-  letter-spacing: 0.0em;
-}
-.ingresar-content-holder {
-  position: absolute;
-  top: 0px;
-  left: 0px;
-  text-align: center;
-  width: 100%;
-  height: 100%;
-}
-.ingresar-inner-contents {
-  position: relative;
-  top: 50%;
-  -webkit-transform: translateY(-50%);
-  -moz-transform: translateY(-50%);
-  -ms-transform: translateY(-50%);
-  -o-transform: translateY(-50%);
-}
-/*Hexagon styles*/
 html,
 body {
   background-color: #fff;
@@ -1114,7 +1085,7 @@ div.odd {
 }*/
 .container {
   /*width: 100%;
-	height: 100%;*/
+    height: 100%;*/
   padding-top: 20px;
 }
 label {
@@ -1151,8 +1122,95 @@ label {
   left: 10;
 }
 /*#pin{
-	width: 30px;
-	height: 100px;
-	background: url("images/pin.jpeg");
-	background-size: 100% 100%;
+    width: 30px;
+    height: 100px;
+    background: url("images/pin.jpeg");
+    background-size: 100% 100%;
 }*/
+.ingresar-primary-heading {
+  font-family: 'nexa_boldregular', Arial, sans-serif;
+  font-size: 1.313em;
+  text-transform: uppercase;
+  letter-spacing: 0.0em;
+}
+.ingresar-secondary-heading {
+  font-family: 'nexa_lightregular', Arial, sans-serif;
+  font-size: 1.125em;
+  text-transform: uppercase;
+  letter-spacing: 0.0em;
+}
+.ingresar-inner-text {
+  font-family: 'nexa_lightregular', Arial, sans-serif;
+  font-size: 0.8em;
+  letter-spacing: 0.0em;
+}
+.ingresar-content-holder {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  text-align: center;
+  width: 100%;
+  height: 100%;
+}
+.ingresar-respuesta {
+  position: relative;
+  margin-top: 72px;
+  resize: none;
+  height: 142px;
+}
+.ingresar-continuar {
+  font-family: 'nexa_boldregular', Arial, sans-serif;
+  font-size: 1.313em;
+  text-transform: uppercase;
+  color: "#fff";
+  border: none;
+  font-weight: normal;
+  line-height: 46px;
+  height: 46px;
+}
+.hex-row {
+  display: inline-block;
+  position: relative;
+}
+/*
+.row-even{
+  display: inline-block;
+  position: relative;
+  top: -70px;
+  //margin-top: -12.1%;
+  left: 122px;
+}
+
+.row-odd-narrow{
+  display: inline-block;
+  position: relative;
+  top: -140px;
+  //margin-top: -12.1%;
+}
+
+.row-odd{
+   position: relative;
+   display: inline-block;
+}*/
+.ingresar-cancelar {
+  font-family: 'nexa_lightregular', Arial, sans-serif;
+  font-size: 0.8em;
+  text-transform: uppercase;
+  color: "#fff";
+  text-decoration: underline;
+  margin: auto;
+}
+.ingresar-left-col {
+  margin-right: "0px";
+  float: right;
+  background-color: "#0f0";
+}
+.ingresar-inner-contents {
+  position: relative;
+  margin: 10px;
+  top: 50%;
+  -webkit-transform: translateY(-50%);
+  -moz-transform: translateY(-50%);
+  -ms-transform: translateY(-50%);
+  -o-transform: translateY(-50%);
+}

@@ -1,12 +1,13 @@
 import React from 'react';
 import Pregunta from './Ingresar/Pregunta'
 import Porque from './Ingresar/Porque'
+import Ubicacion from './Ingresar/Ubicacion'
 
 var data = {
-  respuesta: null,
+  respuesta: "",
   porque: null,
   existente: null,
-  localidad: null,
+  localidad: "PUENTE ARANDA",
   barrio: null, 
   direccion: null, 
   coords: {
@@ -31,10 +32,12 @@ var Ingresar = React.createClass({
     console.log("going to next step");
      console.log(val);
      var data = this.state.data;
-     data[val.attr]=val.value;
-    this.setState({
-      step : this.state.step + 1,
-      data: data
+     for(var i = 0; i < val.length; i++){
+       data[val[i].attr]=val[i].value;
+      }
+      this.setState({
+        step : this.state.step + 1,
+        data: data
     })
   },
   cancelar(){
@@ -48,7 +51,7 @@ var Ingresar = React.createClass({
 
   render() {
 	var shadeStyle = {
-		position: "fixed",
+		//position: "fixed",
 		left: "0px",
 		top: "0px",
 		width: "100%",
@@ -60,19 +63,27 @@ var Ingresar = React.createClass({
       left: "0px",
     top: "0px"
   }
+
   var props = {
     primaryColor: "#ff3366",
     nextStep: this.nextStep,
-    cancelar: this.cancelar
+    cancelar: this.cancelar,
+    data: this.state.data
   }
+
+ 
+
   var formContents = {};
   console.log("step is "+ this.state.step);
   switch(this.state.step){
     case 0: 
-          formContents = <Pregunta {...props} attr={"respuesta"} value={this.state.data.respuesta}/>;
+          formContents = <Pregunta {...props} />;
           break;
     case 1: 
-          formContents = <Porque {...props} attr={"porque"} value={this.state.data.porque}/>;
+          formContents = <Porque {...props}/>;
+          break;
+    case 2: 
+          formContents = <Ubicacion {...props}/>;
           break;
      }
   	return (<div style={shadeStyle}>

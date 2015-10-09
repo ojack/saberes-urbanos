@@ -39,6 +39,7 @@ var AddSite = React.createClass({
         // var data = this.props.data;
         // console.log(this.props.data);
         console.log("updating data");
+        console.log(data);
         var submitData = {};
         if(this.state.barrio!=null) submitData.barrio = this.state.barrios[this.state.barrio].properties.NOMBRE;
         if(this.state.localidad!=null) submitData.localidad = this.state.localidades[this.state.localidad].properties.NOMBRE;
@@ -180,7 +181,7 @@ var AddSite = React.createClass({
                     <h1>{title}</h1>
                 </div>
               
-                <Formsy.Form className={formClassName} onSubmit={this.updateData} ref="form">
+                <Formsy.Form className={formClassName} onSubmit={this.updateData} onKeyUp={this.handleKeyUp} ref="form">
 
                     <fieldset>
                         <Input
@@ -232,13 +233,7 @@ var AddSite = React.createClass({
                             updateParent={this.updateDireccion}
                             label="Dirección"
                         />
-                         <MultipleDropdown
-                            {...sharedProps}
-                            name="categoria"
-                            value={this.props.data.categoria}
-                            
-                            label={"Categoría"}
-                        />
+                       
                          <MapLocator 
                              {...sharedProps}
                             rows={3}
@@ -248,7 +243,13 @@ var AddSite = React.createClass({
                             direccion={this.state.direccion}
                             label="Ubique el sitio en el mapa de Bogotá"
                         />
-                        
+                          <MultipleDropdown
+                            {...sharedProps}
+                            name="categoria"
+                            value={this.props.data.categoria}
+                            
+                            label={"Categoría"}
+                        />
                          <File
                             {...sharedProps}
                             name="foto"
@@ -277,9 +278,9 @@ var AddSite = React.createClass({
                    
                    
                     <Row >
-                        <input className="btn btn-default" onClick={this.resetForm} type="reset" defaultValue="Reset" />
+                        <input type="button" className="btn btn-default" onClick={this.resetForm} type="reset" defaultValue="Reset" />
                         {' '}
-                        <button className="btn btn-primary" onClick={this.submitForm}>Submit </button>
+                        <button type="button" className="btn btn-primary" onClick={this.submitForm}>Submit </button>
                     </Row>
                 </Formsy.Form>
                   {confirm}

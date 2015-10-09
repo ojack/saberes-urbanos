@@ -19,7 +19,7 @@ var colorArray = [
      // '#EAE4F0',
      // '#FFD6E0',
      // '#FFADC2',
-     // '#FF85A3',
+     '#FF85A3',
      '#FF5C85',
      '#FF3366',
      '#BF264D',
@@ -90,8 +90,8 @@ showElements(){
       delete obj.__v;
       if(obj.properties.sonidoUrl){
         console.log(" has sound "+ obj.properties.sonidoUrl);
-       // this.audioContext.addSound(index, obj.properties.sonidoUrl);
-       // obj.properties.hasSound = true;
+        this.audioContext.addSound(index, obj.properties.sonidoUrl);
+        obj.properties.hasSound = true;
       } else {
         obj.properties.hasSound = false;
       }

@@ -12,6 +12,12 @@ var API_KEY = "AIzaSyDSAaqtPycMHBfGlBjG-q-UzKm6T-YDHhA";
 
 var scriptURL = "https://maps.googleapis.com/maps/api/js?key="+API_KEY+"&callback=initMap";
 
+//var scriptURL = "https://maps.googleapis.com/maps/api/js?key="+API_KEY;
+window.initMap = function() {
+      console.log("init map called");
+       // This triggers the onScriptLoaded method call on all mounted Map components.
+        ReactScriptLoader.triggerOnScriptLoaded(scriptURL);
+    };
 var MapLocator = React.createClass({
 	mixins: [Formsy.Mixin, ReactScriptLoaderMixin],
 	// componentWillReceiveProps(nextProps){
@@ -30,14 +36,18 @@ var MapLocator = React.createClass({
     // ReactScriptLoader.triggerOnScriptLoaded() call above is made in
     // initializeMaps().
     deferOnScriptLoaded: function() {
-        return true;
+       return true;
+      //return false;
     },
 
     onScriptLoaded: function() {
         // Render a map with the center point given by the component's lat and lng
         // properties.
         console.log("script loaded");
-        
+        console.log(google.maps);
+         console.log(this.state.componentLoaded);
+        if(google.maps && this.state.componentLoaded){
+
         //[this.getValue().lng, this.getValue().lat]
         this.map = new google.maps.Map(document.getElementById('map'), {
 		    center: {lat: this.getValue().lat, lng: this.getValue().lng},
@@ -53,20 +63,23 @@ var MapLocator = React.createClass({
        
   		 this.map.addListener('center_changed', function() {
     		var coords = this.map.getCenter();
-    		//console.log(coords);
-    		this.setValue({lat: coords.H, lng: coords.L});
+    		console.log(coords);
+    		this.setValue({lat: coords.lat(), lng: coords.lng()});
     		var bounds = this.map.getBounds();
     		this.setState({bounds: bounds});
   		}.bind(this));
   		this.geocoder = new google.maps.Geocoder();
-  		
+  		} else {
+        console.log("retrying");
+        setTimeout(this.scriptLoaded, 100);
+      }
      
     },
      onScriptError: function() {
         // Show the user an error message.
     },
     getInitialState(){
-    	return {scriptLoaded: false, bounds: null}
+    	return {scriptLoaded: false, componentLoaded: false, bounds: null}
     },
 	updateCoords(loc){
 		//console.log("updating");
@@ -80,11 +93,7 @@ var MapLocator = React.createClass({
 	componentDidMount(){
 		//console.log("calling component mount");
 		//console.log(this.props);
-		window.initMap = function() {
-
-   		 // This triggers the onScriptLoaded method call on all mounted Map components.
-    		ReactScriptLoader.triggerOnScriptLoaded(scriptURL);
-		};
+		this.setState({componentLoaded: true});
 		
 	},
 	componentWillReceiveProps(nextProps){
