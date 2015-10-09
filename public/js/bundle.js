@@ -7819,6 +7819,7 @@ var Intro = _react2["default"].createClass({
 				_react2["default"].createElement("source", { src: "./video/enterprise-loop.mp4", type: "video/mp4" }),
 				"Your browser does not support the video tag."
 			),
+			_react2["default"].createElement("img", { src: "./img/start-photo.jpg", style: videoStyle }),
 			closeButton,
 			_react2["default"].createElement("div", { style: shadeStyle }),
 			_react2["default"].createElement(

@@ -75,6 +75,7 @@ componentDidMount(){
 			  <source src="./video/enterprise-loop.mp4" type="video/mp4"/>
 			Your browser does not support the video tag.
 			</video>
+			<img src="./img/start-photo.jpg" style={videoStyle}></img>
 			{closeButton}
 	  	  	<div style={shadeStyle}></div>
 	  	  		<div className="header" style={headerStyle}>
