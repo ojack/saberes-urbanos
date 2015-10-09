@@ -208,7 +208,7 @@ var AddSite = _react2['default'].createClass({
 
     getInitialState: function getInitialState() {
 
-        return { direccion: this.props.data.direccion, showSubmit: false, submitData: null, localidades: null, barrios: null };
+        return { direccion: this.props.data.direccion, showSubmit: false, submitData: null, localidades: null, barrios: null, bounds: null };
     },
     resetForm: function resetForm() {
         this.refs.form.reset();
@@ -242,6 +242,8 @@ var AddSite = _react2['default'].createClass({
             var code = this.state.localidades[index].properties.COD_LOC_IN;
             this.updateBarrioList(code, false);
         }
+        console.log(this.state.localidades[index]);
+        this.setState({ bounds: this.state.localidades[index].bbox });
     },
     updateBarrioList: function updateBarrioList(code, selectBarrio) {
         console.log("getting code ");
@@ -286,13 +288,13 @@ var AddSite = _react2['default'].createClass({
     //  },
     updateBarrio: function updateBarrio(index) {
         console.log(" barrio " + index);
-        this.setState({ barrio: index });
+        this.setState({ barrio: index, bounds: this.state.barrios[index].bbox });
     },
     handleBlur: function handleBlur(e) {
         console.log(e.target);
     },
     componentDidMount: function componentDidMount() {
-        _superagent2['default'].get('/api/localidades').query({ limit: 50 }).end((function (err, res) {
+        _superagent2['default'].get('/api/localidades').query({ bbox: true }).end((function (err, res) {
             //console.log(res.body);
             // this.initSitios(res.body);
             var localidadIndex = null;
@@ -415,6 +417,7 @@ var AddSite = _react2['default'].createClass({
                         name: 'coords',
                         value: this.props.data.coords,
                         direccion: this.state.direccion,
+                        bounds: this.state.bounds,
                         label: 'Ubique el sitio en el mapa de Bogotá'
                     })),
                     _react2['default'].createElement(_MultipleDropdown2['default'], _extends({}, sharedProps, {
@@ -1455,7 +1458,7 @@ var MapLocator = _react2['default'].createClass({
   // initializeMaps().
   deferOnScriptLoaded: function deferOnScriptLoaded() {
     //return true;
-    return false;
+    return true;
   },
 
   onScriptLoaded: function onScriptLoaded() {
@@ -1503,7 +1506,7 @@ var MapLocator = _react2['default'].createClass({
     //console.log(data);
     //data.coords.lat = loc.H;
     // data.coords.lng = results[0].geometry.location.L;
-    this.setValue({ lat: loc.H, lng: loc.L });
+    this.setValue({ lat: loc.lat(), lng: loc.lng() });
     this.map.setCenter(loc, 16);
     //this.map.flyTo({center: [data.coords.lng, data.coords.lat], zoom: 16});
   },
@@ -1511,8 +1514,20 @@ var MapLocator = _react2['default'].createClass({
     //console.log("calling component mount");
     //console.log(this.props);
     this.setState({ componentLoaded: true });
+    setTimeout((function () {
+      ReactScriptLoader.triggerOnScriptLoaded(scriptURL);
+    }).bind(this), 600);
   },
   componentWillReceiveProps: function componentWillReceiveProps(nextProps) {
+    console.log(nextProps);
+    if (nextProps.bounds != this.props.bounds) {
+      console.log(nextProps.bounds);
+      var sw = new google.maps.LatLng(nextProps.bounds[1], nextProps.bounds[0]);
+      var ne = new google.maps.LatLng(nextProps.bounds[3], nextProps.bounds[2]);
+      var bounds = new google.maps.LatLngBounds(sw, ne);
+
+      this.map.fitBounds(bounds);
+    }
     //console.log("locator received props");
     //console.log(nextProps);
   },

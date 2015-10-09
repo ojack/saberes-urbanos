@@ -21,7 +21,7 @@ var Textarea = FRC.Textarea;
 var AddSite = React.createClass({
     getInitialState(){
 
-        return {direccion: this.props.data.direccion, showSubmit: false, submitData: null, localidades: null, barrios: null}
+        return {direccion: this.props.data.direccion, showSubmit: false, submitData: null, localidades: null, barrios: null, bounds: null}
     },
     resetForm() {
         this.refs.form.reset();
@@ -57,6 +57,8 @@ var AddSite = React.createClass({
         var code = this.state.localidades[index].properties.COD_LOC_IN;
         this.updateBarrioList(code, false);
       }
+      console.log(this.state.localidades[index]);
+      this.setState({bounds: this.state.localidades[index].bbox})
     },
     updateBarrioList(code, selectBarrio){
        console.log("getting code ");
@@ -107,7 +109,7 @@ var AddSite = React.createClass({
    //  },
     updateBarrio(index){
         console.log(" barrio "+ index);
-       this.setState({barrio: index});
+       this.setState({barrio: index, bounds: this.state.barrios[index].bbox});
     },
     handleBlur(e){
         console.log(e.target);
@@ -115,7 +117,7 @@ var AddSite = React.createClass({
     componentDidMount: function(){
          request
            .get('/api/localidades')
-           .query({ limit: 50 })
+           .query({ bbox: true })
            .end(function(err, res){
                 //console.log(res.body);
                // this.initSitios(res.body);
@@ -241,6 +243,7 @@ var AddSite = React.createClass({
                             name="coords"
                             value={this.props.data.coords}
                             direccion={this.state.direccion}
+                            bounds={this.state.bounds}
                             label="Ubique el sitio en el mapa de Bogotá"
                         />
                           <MultipleDropdown

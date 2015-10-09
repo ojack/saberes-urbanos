@@ -37,7 +37,7 @@ var MapLocator = React.createClass({
     // initializeMaps().
     deferOnScriptLoaded: function() {
        //return true;
-      return false;
+      return true;
     },
 
     onScriptLoaded: function() {
@@ -86,17 +86,30 @@ var MapLocator = React.createClass({
 		//console.log(data);
 		//data.coords.lat = loc.H;
 				// data.coords.lng = results[0].geometry.location.L;
-		this.setValue({lat: loc.H, lng: loc.L});
+		this.setValue({lat: loc.lat(), lng: loc.lng()});
 		this.map.setCenter(loc, 16);
 		//this.map.flyTo({center: [data.coords.lng, data.coords.lat], zoom: 16});
 	},
 	componentDidMount(){
 		//console.log("calling component mount");
 		//console.log(this.props);
-		this.setState({componentLoaded: true});
+    this.setState({componentLoaded: true});
+    setTimeout(function(){
+      ReactScriptLoader.triggerOnScriptLoaded(scriptURL);
+		
+  }.bind(this), 600);
 		
 	},
 	componentWillReceiveProps(nextProps){
+    console.log(nextProps);
+    if (nextProps.bounds!=this.props.bounds){
+      console.log(nextProps.bounds);
+       var sw = new google.maps.LatLng(nextProps.bounds[1], nextProps.bounds[0]);
+     var ne = new google.maps.LatLng(nextProps.bounds[3], nextProps.bounds[2]);
+      var bounds = new google.maps.LatLngBounds(sw, ne);
+    
+      this.map.fitBounds(bounds)
+    }
 		//console.log("locator received props");
 		//console.log(nextProps);
 	},
