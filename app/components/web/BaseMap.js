@@ -35,26 +35,29 @@ var BaseMap = React.createClass({
 	
 
 	updatePixelCoords(){
+		this.props.sitioData.updateBounds(this.map.getBounds());
 		var zoom = this.map.getZoom();
-	if(this.props.sitios != null && this.state.mapLoaded){
-		var sit = this.props.sitios.map(function(obj, index){
+	if(this.props.sitioData.currentSitios != null && this.state.mapLoaded){
+		var sit = this.props.sitioData.currentSitios.map(function(obj, index){
 			
 			obj.properties.screenCoords = this.map.project({lat: obj.geometry.coordinates[1], lng: obj.geometry.coordinates[0]});
 			if(obj.properties.hasSound){
-				this.props.audioContext.positionPanner(index, obj.properties.screenCoords.x, obj.properties.screenCoords.y, 18-zoom);
+				//this.props.audioContext.positionPanner(index, obj.properties.screenCoords.x, obj.properties.screenCoords.y, 18-zoom);
 			}
 			return obj;
 		}.bind(this));
-			this.setState({sitios: sit}, this.renderCanvas);
+		this.props.onMapMove();
+			//this.setState({sitios: sit}, this.renderCanvas);
 			//console.log(sit);
+			this.renderCanvas();
 	}
 	},
 	renderCanvas(){
 		this.ctx.clearRect(0,0, window.innerWidth, window.innerHeight);
 		var rad = 8;
 		var outerRad;
-		for(var i = 0; i < this.props.sitios.length; i++){
-			var obj = this.props.sitios[i];
+		for(var i = 0; i < this.props.sitioData.currentSitios.length; i++){
+			var obj = this.props.sitioData.currentSitios[i];
 			outerRad = rad+3;
 			var vol = 0;
 			
@@ -69,11 +72,11 @@ var BaseMap = React.createClass({
 			drawHex(this.ctx, obj.properties.screenCoords, rad);
 			this.ctx.closePath();
 			this.ctx.fill();
-			if(this.props.sitios[i].properties.hasSound){
+			if(obj.hasSound){
 				
 				
 				//
-				vol = this.props.audioContext.getVolume(i);
+				//vol = this.props.audioContext.getVolume(i);
 				//console.log(vol);
 				outerRad = outerRad + vol;
 				var opacity = 0.7*(1-vol/100);
@@ -134,7 +137,7 @@ var BaseMap = React.createClass({
 	},
 	addGeoJSON(){
 		//only load data if map has been initialized, data has been received, and data has no already been loaded
-		if(this.props.sitios != null && this.state.mapLoaded && !this.state.dataLoadedToMap){
+		if(this.props.sitioData.data != null && this.state.mapLoaded && !this.state.dataLoadedToMap){
 			
 			console.log("adding data");
 			// console.log(this.state.sitios);
@@ -143,7 +146,7 @@ var BaseMap = React.createClass({
 			   // "data": this.state.sitios,
 			    "data": {
 			      "type": "FeatureCollection",
-			      "features": this.props.sitios
+			      "features": this.props.sitioData.data
 			    }
 			  });
 			 //{respuesta}

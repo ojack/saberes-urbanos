@@ -1,6 +1,7 @@
 import React from 'react';
 import Intro from './Intro';
 import Main from './Main';
+import WebMap from './WebMap';
 
 
 var Web = React.createClass({
@@ -27,7 +28,7 @@ var Web = React.createClass({
   		case 0: 
        	 return (<Intro nextStep={this.nextStep}/>)
        	case 1: 
-       		 return <Main nextStep={this.nextStep} />
+       		 return <WebMap nextStep={this.nextStep} />
    	}
   }
 });

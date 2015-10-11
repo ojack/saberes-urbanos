@@ -38,18 +38,24 @@ var IngresarHex = React.createClass({
     var style = {
       color: "#ff3366"
     }
-  	return (
-  		 <div className="where " style={hexplaceholder}>   
-          <div className="ingresar-hex" style={hexStyle}>
-            <div className="ingresar-hex" style={innerHex}>
-              
-            </div>
-          </div>
-          <div className="ingresar-content-holder">
+    var contentOverlay = {};
+    if(!this.props.noOverlay){
+      contentOverlay = (
+         <div className="ingresar-content-holder">
               <div className="ingresar-inner-contents">
                 {this.props.contents}
               </div>
           </div>
+        );
+    }
+  	return (
+  		 <div className="where " style={hexplaceholder}>   
+          <div className="ingresar-hex" style={hexStyle}>
+            <div className="ingresar-hex" style={innerHex}>
+              {this.props.hexContents}
+            </div>
+          </div>
+          {contentOverlay}
         </div>
        
   	);

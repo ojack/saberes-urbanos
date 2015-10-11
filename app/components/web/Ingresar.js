@@ -85,6 +85,7 @@ var Ingresar = React.createClass({
     case 2: 
           formContents = <Ubicacion {...props}/>;
           break;
+    
      }
   	return (<div style={shadeStyle}>
               <div className="container">

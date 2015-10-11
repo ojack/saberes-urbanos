@@ -1,16 +1,18 @@
 import React from 'react';
 import IngresarHex from './IngresarHex';
+import IngresarMapa from './IngresarMapa';
 import request from 'superagent';
 import Select from 'react-select';
+import ReactiveInput from './ReactiveInput';
 
 var Ubicacion = React.createClass({
    getInitialState(){
-        return {localidades: null, direccion: this.props.data.direccion, localidad: null, barrio: null, barrios: null}
+        return {localidades: null, direccion: this.props.data.direccion, localidad: null, barrio: null, barrios: null, bounds: null}
     },
   componentDidMount(){
     request
            .get('/api/localidades')
-           .query({ limit: 50 })
+           .query({ bbox: true })
            .end(function(err, res){
                var localidadIndex = null;
                if(this.props.data.localidad!=null){
@@ -29,7 +31,7 @@ var Ubicacion = React.createClass({
     },
      updateLocalidad(index){
        if(index != this.state.localidad){
-        this.setState({localidad: index, barrio: null});
+        this.setState({localidad: index, barrio: null, bounds: this.state.localidades[index].bbox});
         var code = this.state.localidades[index].properties.COD_LOC_IN;
         this.updateBarrioList(code, false);
       }
@@ -55,10 +57,15 @@ var Ubicacion = React.createClass({
         
     },
     updateBarrio(index){
-       this.setState({barrio: index});
+       this.setState({barrio: index, bounds: this.state.barrios[index].bbox});
     },
-  handleDireccionChange(e){
-    this.setState({direccion: e.target.value});
+  handleDireccionChange(value){
+    this.setState({direccion: value});
+  },
+  updateCoords(coords){
+    console.log("coords are ");
+    console.log(coords);
+    this.setState({coords: coords});
   },
   setValue(e){
     console.log("value is "+e.target.value);
@@ -135,23 +142,25 @@ var Ubicacion = React.createClass({
                             onChange={this.updateBarrio}
                             noResultsText=""
                        />
-                     <input type="text" className="u-full-width" onChange={this.handleDireccionChange} value={this.state.direccion} placeholder="Direccion..." />
+                    <ReactiveInput updateParent={this.handleDireccionChange} value={this.state.direccion} placeholder="Direccion..."/>
                      </div>);
 
    var hexContents = (<div><p style={style} className="ingresar-primary-heading">¿Donde estás?</p></div>);
-
+   var mapContents = (<IngresarMapa coords={this.props.data.coords} bounds={this.state.bounds}  direccion={this.state.direccion} width={width*1.5} height={height*1.5} updateCoords={this.updateCoords}/>);
   	return (
   		<div className="row" >
   			<div className="six columns">
           <div className="ingresar-left-col">
             <IngresarHex contents={hexContents} primaryColor={this.props.primaryColor} width={width} height={height}/>
+
           </div>
-            
+           
           
         </div>
   			<div className="six columns">
   				<IngresarHex contents={hexFormContents} backgroundColor="#333" width={width} height={height}/>
-  		  </div>
+  		    <IngresarHex hexContents={mapContents} noOverlay={true} backgroundColor="#333" width={width*1.5} height={height*1.5}/>
+        </div>
         <button className="ingresar-continuar" style={buttonStyle} onClick={this.props.nextStep.bind(null, data)}> Continuar </button>
         <h5 className="ingresar-cancelar" onClick={this.props.cancelar}> Cancelar </h5>
       </div>
