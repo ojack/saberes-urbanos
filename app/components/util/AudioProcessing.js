@@ -7,7 +7,7 @@ var audioBuffer = null;
 var source = null; 
 
 class AudioProcessing {
-  constructor(url, context, callback){
+  constructor(url, context, gain, callback){
 //window.AudioContext = window.AudioContext||window.webkitAudioContext;
     var analyser = context.createAnalyser();
    var panner = context.createPanner();
@@ -29,21 +29,23 @@ this.panner = panner;
   // Decode asynchronously
   request.onload = function() {
     context.decodeAudioData(request.response, function(buffer) {
+      this.buffer = buffer;
       //audioBuffer = buffer;
-     source = context.createBufferSource(); // creates a sound source
-  source.buffer = buffer;                    // tell the source which sound to play
-  source.loop = true;
-  source.connect(analyser)
+  // this.source = context.createBufferSource(); // creates a sound source
+  // this.source.buffer = buffer;                    // tell the this.source which sound to play
+  // this.source.loop = true;
+  // this.source.connect(analyser)
   analyser.connect(this.panner);
 
-  //source.connect(analyser);
+  //this.source.connect(analyser);
    
     // this.visualize();
 
 
-  this.panner.connect(context.destination);       // connect the source to the context's destination (the speakers)
-  source.start(0); 
+ // this.panner.connect(context.destination);       // connect the this.source to the context's destination (the speakers)
+  this.panner.connect(gain);  
     this.analyser = analyser;
+    this.context = context;
   callback(null); 
     }.bind(this),  function(error) {
         callback(error);
@@ -67,6 +69,16 @@ this.panner = panner;
     // this.visualize();
     //  console.log(context);
    
+  }
+  playSound(){
+    this.source = this.context.createBufferSource(); // creates a sound source
+  this.source.buffer = this.buffer;                    // tell the this.source which sound to play
+  this.source.loop = true;
+  this.source.connect(this.analyser)
+    this.source.start(this.context.currentTime); 
+  }
+  stopSound(){
+    this.source.stop();
   }
   getVolume(){
         var freqDomain = new Uint8Array(this.analyser.frequencyBinCount);

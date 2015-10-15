@@ -8,7 +8,7 @@ var WordCloud = React.createClass({
   render() {
   var containerStyle = {
     position: "absolute",
-    backgroundColor: "rgba(210, 210, 210, 0.3)",
+    backgroundColor: "rgba(160, 160, 160, 0.6)",
     top: "0px",
     right: "10px",
     color: "#fff",
@@ -17,7 +17,9 @@ var WordCloud = React.createClass({
     padding: "20px",
     paddingLeft: "60px",
     paddingRight: "60px",
-    textAlign: "center"
+    textAlign: "center",
+    opacity: 0.4,
+    height: "100%"
     //lineHeight: "100%"
    // zIndex: 200
   }

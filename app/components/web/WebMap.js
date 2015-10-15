@@ -5,7 +5,7 @@ import Ingresar from './Ingresar'
 import request from 'superagent';
 import AudioContextManager from './AudioContextManager';
 import SitioData from './../util/SitioData';
-import WordCloud from './WordCloud'
+
 
 var ReactScriptLoaderMixin = require('react-script-loader').ReactScriptLoaderMixin;
 
@@ -54,10 +54,14 @@ onMapMove(){
     this.sitioData.searchString(query);
    //
   },
+  toggleMute(){
+    console.log("called mute");
+    this.audioContext.mute();
+  },
   updateWordCloud(){
-    var words = this.sitioData.getWords();
+   // var words = this.sitioData.getWords();
    // console.log(words);
-    this.setState({words: words});
+   // this.setState({words: words});
   },
   getCategoria(query){
     //
@@ -69,8 +73,8 @@ onMapMove(){
   // },
   componentDidMount(){
     //this.sitioDB = new SitioDB();
-  // this.audioContext = new AudioContextManager();
-    this.sitioData = new SitioData(function(err, data){
+    this.audioContext = new AudioContextManager();
+    this.sitioData = new SitioData(this.audioContext, function(err, data){
       if(err){
         console.log(err);
       } else {
@@ -80,14 +84,25 @@ onMapMove(){
     }.bind(this));
    
   },
+  componentWillUnmount: function () {
+      cancelAnimationFrame(this.renderCanvas);
+  },
   render() {
   	var mapElements = [];
+    var muteStyle = {
+      position: "absolute",
+      right: "10px",
+      top: "10px",
+     
+      backgroundColor: "#000"
+    }
     if(this.state.scriptLoaded==true && this.state.sitios!=null){
       mapElements.push( <BaseMap bounds={this.state.bounds} onMapMove={this.onMapMove} onMoveEnd={this.updateWordCloud} outline={this.state.outline} audioContext={this.audioContext} mapLoaded={this.state.mapLoaded} sitioData={this.sitioData} onMapLoaded={this.showElements}/>);
     }
   	if(this.state.mapLoaded){
   		mapElements.push(<Navigation setBounds={this.setBounds} setOutline={this.setOutline} categorias={this.state.categorias} searchSitios={this.searchSitios} getCategoria={this.getCategoria} color={this.state.color}/>);
-  	}
+  	 mapElements.push(<div style={muteStyle} onClick={this.toggleMute}>MUTE</div>);
+    }
       var containerStyle = {
         width: "100%",
         height: "100%",
@@ -98,7 +113,6 @@ onMapMove(){
   	  return(<div>
   	  		
   	  			{mapElements}
-            <WordCloud words={this.state.words}/>
   	  		</div>)
    	}
   

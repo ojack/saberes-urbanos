@@ -4,6 +4,7 @@
 // possibly: only update whats current list when mouse up
 // talk to remote DB
 //on upload get barrio and localidad on server side
+//* list that only has indexed fields, in array, and object that contains all details
 var lunr = require('lunr');
 require('./lunr.stemmer.support.js')(lunr);
 require('./lunr.es.js')(lunr);
@@ -20,7 +21,8 @@ var colorArray = [
     ];
 
 class SitioData {
-  constructor(callback){
+  constructor(audioContext, callback){
+    this.audioContext = audioContext;
      request
        .get('/api/sitios')
        .query({ limit: 50 })
@@ -57,9 +59,10 @@ class SitioData {
     var sit = sitios.map(function(obj, index){
       obj.properties.tempId = index;
       delete obj.__v;
+      obj.properties.highlighted = false; 
       if(obj.properties.sonidoUrl){
         console.log(" has sound "+ obj.properties.sonidoUrl);
-       // this.audioContext.addSound(index, obj.properties.sonidoUrl);
+        this.audioContext.addSound(index, obj.properties.sonidoUrl);
         obj.properties.hasSound = true;
       } else {
         obj.properties.hasSound = false;
@@ -89,6 +92,7 @@ class SitioData {
 
   updateBounds(bbox){
     this.text = {};
+    var soundArray = [];
     var minLng = bbox._sw.lng;
     var minLat = bbox._sw.lat;
     var maxLng = bbox._ne.lng;
@@ -104,6 +108,7 @@ class SitioData {
             if(obj.geometry.coordinates[0] > minLng){
               sit.push(obj);
               var cat = obj.properties.categoria;
+              if(obj.properties.hasSound) soundArray.push(obj.properties.tempId);
               if(cat){
                 if(categorias.hasOwnProperty(cat)){
                         categorias[cat].count +=1;
@@ -119,6 +124,7 @@ class SitioData {
       }
     }
     //console.log(this.text);
+    this.audioContext.updateSoundArray(soundArray);
     this.currentSitios = sit;
     this.categorias = categorias;
     //console.log(this.currentSitios);
@@ -172,13 +178,20 @@ class SitioData {
   }
   searchString(string){
     console.log(this.idx);
+    this.clearHighlighted();
    // console.log( lunr.es.stopWordFilter.stopWords.elements);
     var docs = this.idx.search(string);
     console.log(docs);
     for(var i = 0; i < docs.length; i ++){
       console.log(this.data[docs[i].ref]);
+      this.data[docs[i].ref].properties.highlighted = true;
     }
     //to do: use lunr.js
+  }
+  clearHighlighted(){
+    for(var i=0; i < this.data.length; i++){
+      this.data[i].properties.highlighted = false;
+    }
   }
   
 }

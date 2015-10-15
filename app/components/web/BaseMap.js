@@ -5,8 +5,10 @@ import mapStyle from './../data/light-v8-edit.json'
 import HexGrid from './HexGrid'
 import InfoDetail from './InfoDetail'
 import AudioContextManager from './AudioContextManager'
+import WordCloud from './WordCloud'
+import CanvasHex from './../util/CanvasHex'
 
-
+var readyToRender = false;
 function drawHex(ctx, coords, rad){
 	
 		var angle;
@@ -30,6 +32,7 @@ var BaseMap = React.createClass({
 	     selected: null,
 	     mapLoaded: false,
 	     dataLoadedToMap: false,
+	     words: [],
 	 	zoom: 12});
 	},
 	
@@ -49,37 +52,57 @@ var BaseMap = React.createClass({
 		this.props.onMapMove();
 			//this.setState({sitios: sit}, this.renderCanvas);
 			//console.log(sit);
-			this.renderCanvas();
+			//this.renderCanvas();
+		if(!readyToRender){
+			this.setState({sitios: sit}, this.renderCanvas);
+			readyToRender = true;
+		} else {
+			this.setState({sitios: sit});
+		}
 	}
 	},
 	renderCanvas(){
 		this.ctx.clearRect(0,0, window.innerWidth, window.innerHeight);
+		this.ctx.drawImage(this.hex.canvas, 0, 0);
 		var rad = 8;
 		var outerRad;
 		for(var i = 0; i < this.props.sitioData.currentSitios.length; i++){
 			var obj = this.props.sitioData.currentSitios[i];
-			outerRad = rad+3;
+			
+
 			var vol = 0;
+			var mult = 1;
 			
-			
-			if(this.state.selected != null && obj.properties.tempId == this.state.selected.tempId){
-				// = 20;
-			}
+			// if(this.state.selected != null && obj.properties.tempId == this.state.selected.tempId){
+			// 	// = 20;
+			// }
 			//this.ctx.fillStyle = "#FF3366";
 			//this.ctx.fillStyle = "#000";
+			if(obj.properties.highlighted){
+				var hex;
+				if(obj.properties.canvasHex){
+					hex = obj.properties.canvasHex;
+				} else {
+					console.log(obj.properties);
+				}
+				mult=3;
+			}
+			outerRad = rad*mult + 3;
 			this.ctx.fillStyle = obj.properties.color;
 			this.ctx.beginPath();
-			drawHex(this.ctx, obj.properties.screenCoords, rad);
+			
+			drawHex(this.ctx, obj.properties.screenCoords, rad*mult);
 			this.ctx.closePath();
 			this.ctx.fill();
-			if(obj.hasSound){
+			if(obj.properties.hasSound){
 				
-				
+				//console.log(this.props.audioContext);
 				//
-				//vol = this.props.audioContext.getVolume(i);
+				vol = this.props.audioContext.getVolume(obj.properties.tempId);
 				//console.log(vol);
 				outerRad = outerRad + vol;
 				var opacity = 0.7*(1-vol/100);
+
 			this.ctx.strokeStyle = "rgba(255, 51, 102, "+ opacity+")";
 			//this.ctx.strokeStyle = "#FF3366";
 			this.ctx.beginPath();
@@ -108,7 +131,7 @@ var BaseMap = React.createClass({
 			//this.ctx.fillRect(i*10, i*10,8, 8);
 			//this.ctx.fillRect(100,100, 8, 8);
 		}
-		//requestAnimationFrame(this.renderCanvas);
+		requestAnimationFrame(this.renderCanvas);
 	},
 	addOutline(outline){
 		console.log("adding outline");
@@ -158,15 +181,15 @@ var BaseMap = React.createClass({
 			    "source": "markers",
 			    "interactive": true,
 			    "layout": {
-			     "icon-image": "default_marker",
-			      "text-field": "{respuesta}",
-			      "text-font": ["Open Sans Semibold, Arial Unicode MS Bold"],
+			     "icon-image": "default_marker"//,
+			    //  "text-field": "{respuesta}",
+			    //   "text-font": ["Open Sans Semibold, Arial Unicode MS Bold"],
 
-			    "text-offset": [0.0, 1.0],
-			      "text-anchor": "top",
-			      "text-justify": "center",
-			      "text-optional": true,
-			      "text-size": 12,
+			    // "text-offset": [0.0, 1.0],
+			    //   "text-anchor": "top",
+			    //   "text-justify": "center",
+			    //   "text-optional": true,
+			    //   "text-size": 12,
 			    },
 			    "paint": {
 			    	"icon-opacity": 0.05,
@@ -186,7 +209,7 @@ var BaseMap = React.createClass({
 			          	//for(var i )
 			         	console.log(e.point);
 			         	console.log(e.lngLat);
-			         	this.setState({selected: features[0].properties, coords: {lat: e.lngLat.lat, lng: e.lngLat.lng}}, this.renderCanvas);
+			         	this.setState({selected: features[0].properties, coords: {lat: e.lngLat.lat, lng: e.lngLat.lng}});
 			         	this.map.flyTo({center: e.lngLat, zoom: 16, pitch: 100});
 
 			         } else {
@@ -203,7 +226,11 @@ var BaseMap = React.createClass({
 				}.bind(this));
 
 			 this.map.on('moveend', function(e) {
-					this.props.onMoveEnd();
+					//this.props.onMoveEnd();
+					  var words = this.props.sitioData.getWords();
+   // console.log(words);
+    this.setState({words: words});
+
 				}.bind(this));
 		
 		
@@ -214,7 +241,8 @@ var BaseMap = React.createClass({
 	componentDidMount(){
 		console.log("calling component mount");
 		console.log(this.props);
-		
+		 var url = "https://encrypted-tbn2.gstatic.com/images?q=tbn:ANd9GcRSrrglfsI5q0J9bx2gAOEa5dI2dQDSEGhuKaV-u5UxLnhrmuvE";
+		 this.hex = new CanvasHex(100, url);
 		mapboxgl.accessToken = 'pk.eyJ1Ijoib2oiLCJhIjoiSEw0cDJaNCJ9.9ffK1AU2O26zvS5Zsa6eqw';
 		this.map = new mapboxgl.Map({
 		  container: 'map-fullscreen', // container id
@@ -261,6 +289,7 @@ var BaseMap = React.createClass({
 		this.canvas.width = window.innerWidth;
 		this.canvas.height = window.innerHeight;
 		window.addEventListener( 'resize', this.onResize, false );
+		requestAnimationFrame(this.renderCanvas);
 	},
 	onResize: function(){
 		this.canvas.width = window.innerWidth;
@@ -289,9 +318,11 @@ var BaseMap = React.createClass({
 			info.push(<InfoDetail info = {this.state.selected} coords = {this.state.coords} />);
 			//info.push(<SvgHex coords={this.state.coords}/>);
 		}
+		//<WordCloud words={this.state.words}/>
 	    return (
               <div id='map-container-fullscreen'>
               	<div id='map-fullscreen'/>
+              	
       			<canvas id="map-canvas" ref="canvas"/>
       			{info}
       			

@@ -8,7 +8,7 @@ import Web from './components/web/Web';
 import Login from './components/admin/Login';
 import Register from './components/Register';
 import Ingresar from './components/web/Ingresar';
-
+import Experiment from './components/web/Experiment';
 
 export default (
   <Route handler={App}>
@@ -19,6 +19,7 @@ export default (
   	<Route path='/ingresar' handler={Ingresar} />
   	<Route path='/login' handler={Login} />
   	<Route path='/register' handler={Register} />
+    <Route path='/experiment' handler={Experiment} />
     <Route path='/' handler={Web} />
   </Route>
 );
