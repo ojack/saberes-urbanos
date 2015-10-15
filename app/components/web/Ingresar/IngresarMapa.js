@@ -7,9 +7,9 @@ var IngresarMapa = React.createClass({
     onScriptLoaded: function() {
         // Render a map with the center point given by the component's lat and lng
         // properties.
-        console.log("script loaded");
-        console.log(google.maps);
-         console.log(this.state.componentLoaded);
+      //  console.log("script loaded");
+      //  console.log(google.maps);
+      //   console.log(this.state.componentLoaded);
        // if(google.maps && this.state.componentLoaded){
 
         //[this.getValue().lng, this.getValue().lat]
@@ -25,14 +25,14 @@ var IngresarMapa = React.createClass({
       });
       google.maps.event.addListenerOnce(this.map, 'idle', function() {
          var bounds = this.map.getBounds();
-        console.log("bounds are");
-        console.log(bounds);
+       // console.log("bounds are");
+       // console.log(bounds);
          this.setState({scriptLoaded: true, bounds: bounds});
       }.bind(this));
        
        this.map.addListener('center_changed', function() {
         var coords = this.map.getCenter();
-        console.log(coords);
+       // console.log(coords);
        
         var bounds = this.map.getBounds();
         this.setState({bounds: bounds, coords:{lat: coords.lat(), lng: coords.lng()}});
@@ -69,9 +69,9 @@ var IngresarMapa = React.createClass({
     
   },
   componentWillReceiveProps(nextProps){
-    console.log(nextProps);
+   // console.log(nextProps);
     if (nextProps.bounds!=this.props.bounds){
-      console.log(nextProps.bounds);
+    //  console.log(nextProps.bounds);
        var sw = new google.maps.LatLng(nextProps.bounds[1], nextProps.bounds[0]);
      var ne = new google.maps.LatLng(nextProps.bounds[3], nextProps.bounds[2]);
       var bounds = new google.maps.LatLngBounds(sw, ne);

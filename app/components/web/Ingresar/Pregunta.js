@@ -8,19 +8,20 @@ var Pregunta = React.createClass({
     }
   },
   setValue(e){
-    console.log("value is "+e.target.value);
-    this.setState({value: e.target.value});
+    //console.log("value is "+e.target.value);
+    //this.setState({value: e.target.value});
+     var data = [{
+      attr: "respuesta",
+      value: e.target.value
+  }];
+    this.props.updateData(data);
   },
   render() {
     console.log(this.props);
 	
 
-  var data = [{
-    attr: this.props.attr,
-    value: this.state.value
-  }];
-  var width = 245;
-  var height = 283;
+ 
+  
  var style = {
     color: this.props.primaryColor
  }
@@ -29,21 +30,33 @@ var Pregunta = React.createClass({
     backgroundColor: this.props.primaryColor,
     color: "#fff"
  }
+
+ var textContainerStyle = {
+    position: "absolute",
+    top: this.props.hexPositions[1].top,
+    left: this.props.hexPositions[1].left,
+    width: this.props.hexWidth,
+    height: this.props.hexHeight,
+ }
+
+  var textAreaStyle = {
+    position: "absolute",
+    width: "80%",
+    top: "50%",
+    height: this.props.hexHeight/2,
+    margin: "5%",
+    marginTop: -this.props.hexHeight/4
+ }
    var hexContents = (<div><p style={style} className="ingresar-primary-heading">Responde la pregunta:</p><p className="ingresar-secondary-heading">¿Que vale la pena conocer de tu barrio?</p></div>);
 
   	return (
-  		<div className="row" >
-  			<div className="six columns">
-          <div className="ingresar-left-col">
-            <IngresarHex contents={hexContents} primaryColor={this.props.primaryColor} width={width} height={height}/>
+    		<div id="pregunta" className={"ingresar-component "+this.props.selectedState}>
+          <div>
+            <IngresarHex contents={hexContents} position={this.props.hexPositions[0]} primaryColor={this.props.primaryColor} width={this.props.hexWidth} height={this.props.hexHeight}/>
           </div>
             
-          
-        </div>
-  			<div className="six columns">
-  				<textarea className="ingresar-respuesta u-full-width" onChange={this.setValue} value={this.state.value} placeholder="Respuesta..." maxLength="200" id="exampleMessage"></textarea>
-          <button className="ingresar-continuar" style={buttonStyle} onClick={this.props.nextStep.bind(null, data)}> Continuar </button>
-          <h5 className="ingresar-cancelar" onClick={this.props.cancelar}> Cancelar </h5>
+  			<div style={textContainerStyle}>
+  				<textarea style={textAreaStyle} onChange={this.setValue} value={this.props.data.respuesta} placeholder="Respuesta..." maxLength="200" id="exampleMessage"></textarea>
   		  </div>
       </div>
   	);

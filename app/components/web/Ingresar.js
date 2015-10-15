@@ -2,6 +2,10 @@ import React from 'react';
 import Pregunta from './Ingresar/Pregunta'
 import Porque from './Ingresar/Porque'
 import Ubicacion from './Ingresar/Ubicacion'
+//import smoothScroll from 'smooth-scroll'
+
+var hexWidth = 245;
+var hexHeight = 283;
 
 var data = {
   respuesta: "",
@@ -21,24 +25,61 @@ var data = {
   visible: null
 };
 
+
 var Ingresar = React.createClass({
  	getInitialState() {
+    var hexPositions = [];
+    for(var i = 0; i < 10; i++){
+      var left = i%2 == 0? 0 : hexWidth/2;
+      hexPositions[i] = {top: i*hexHeight*3/4, left: left}
+    }
     return {
       step : 0,
-      data: data
+      data: data,
+      hexPositions: hexPositions
     }
   },
-  nextStep(val) {
-    console.log("going to next step");
-     console.log(val);
+  handleResize(){
+    var hexPositions = [];
+     if(window.innerWidth > 612){
+        for(var i = 0; i < 10; i++){
+         
+          var row = Math.floor(i/2);
+          var left = i%2 == 0? 0: hexWidth;
+          if(row%2 > 0){
+            left += hexWidth/2;
+          } else {
+            if(row > 0) left+= hexWidth;
+          }
+          hexPositions[i] = {top: row*hexHeight*3/4, left: left}
+        }
+     } else {
+        for(var i = 0; i < 10; i++){
+          var left = i%2 == 0? 0 : hexWidth/2;
+          hexPositions[i] = {top: i*hexHeight*3/4, left: left}
+        }
+     }
+     this.setState({hexPositions: hexPositions});
+  },
+  updateData(val){
+    console.log(val);
      var data = this.state.data;
      for(var i = 0; i < val.length; i++){
        data[val[i].attr]=val[i].value;
       }
       this.setState({
-        step : this.state.step + 1,
         data: data
-    })
+    });
+  },
+  nextStep() {
+    
+    console.log("going to next step");
+     
+      this.setState({
+        step : this.state.step + 1,
+    }, function(){
+      smoothScroll.animateScroll( null, '#porque' );
+    });
   },
   cancelar(){
      console.log("cancelar called");
@@ -48,7 +89,14 @@ var Ingresar = React.createClass({
       step : this.state.step - 1
     })
   },
-
+  componentDidMount(){
+    window.addEventListener('resize', this.handleResize);
+    smoothScroll.init();
+    this.handleResize();
+  },
+  componentWillUnmount: function() {
+    window.removeEventListener('resize', this.handleResize);
+  },
   render() {
 	var shadeStyle = {
 		//position: "fixed",
@@ -66,30 +114,54 @@ var Ingresar = React.createClass({
 
   var props = {
     primaryColor: "#ff3366",
-    nextStep: this.nextStep,
+    updateData: this.updateData,
     cancelar: this.cancelar,
-    data: this.state.data
+    data: this.state.data,
+    hexWidth: hexWidth,
+    hexHeight: hexHeight,
+    hexPositions: this.state.hexPositions
   }
 
- 
+ var buttonStyle = {
+    backgroundColor: "#ff3366",
+    color: "#fff"
+ }
 
-  var formContents = {};
+var navigationStyle = {
+  position: "fixed",
+  bottom: "0px",
+  left: "100px"
+}; 
+
+var containerStyle = {
+    maxWidth: hexWidth*2.5,
+    margin: "auto"
+ }
+ var formContents = [];
+ // var formContents = [<Pregunta {...props} />, <Porque {...props}/>, <Ubicacion {...props}/>];
   console.log("step is "+ this.state.step);
   switch(this.state.step){
     case 0: 
-          formContents = <Pregunta {...props} />;
-          break;
+          formContents.push(<Pregunta {...props} selectedState={"selected"}/>);
+         break;
     case 1: 
-          formContents = <Porque {...props}/>;
-          break;
+           formContents.push(<Pregunta {...props}/>);
+          formContents.push(<Porque {...props} selectedState={"selected"}/>);
+         break;
     case 2: 
-          formContents = <Ubicacion {...props}/>;
-          break;
+          formContents.push(<Pregunta {...props} />);
+          formContents.push(<Porque {...props}/>);
+          formContents.push(<Ubicacion {...props} selectedState={"selected"}/>);
+         break;
     
      }
   	return (<div style={shadeStyle}>
               <div className="container">
-                <div>{formContents}</div>
+                <div style={containerStyle}>{formContents}</div>
+                <div style={navigationStyle}>
+                  <button className="ingresar-continuar" style={buttonStyle} onClick={this.nextStep}> Continuar </button>
+                  <h5 className="ingresar-cancelar" onClick={this.cancelar}> Cancelar </h5>
+                </div>
               </div>
             </div>);
   	

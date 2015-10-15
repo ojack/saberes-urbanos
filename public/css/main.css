@@ -1047,6 +1047,7 @@ button.button-large {
   top: 0px;
   left: 0px;
   pointer-events: none;
+  z-index: 100;
   /*width: 100%;
   width: 800px;
   height: 100%;*/
@@ -1151,6 +1152,12 @@ label {
   text-align: center;
   width: 100%;
   height: 100%;
+}
+.ingresar-component {
+  opacity: 0.5;
+}
+.ingresar-component.selected {
+  opacity: 1.0;
 }
 .ingresar-respuesta {
   position: relative;

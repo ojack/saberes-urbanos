@@ -108,7 +108,7 @@ var BaseMap = React.createClass({
 			//this.ctx.fillRect(i*10, i*10,8, 8);
 			//this.ctx.fillRect(100,100, 8, 8);
 		}
-		requestAnimationFrame(this.renderCanvas);
+		//requestAnimationFrame(this.renderCanvas);
 	},
 	addOutline(outline){
 		console.log("adding outline");
@@ -200,6 +200,10 @@ var BaseMap = React.createClass({
 					this.updatePixelCoords();
 					// console.log("moving");
 					// console.log(this.map.getBounds());
+				}.bind(this));
+
+			 this.map.on('moveend', function(e) {
+					this.props.onMoveEnd();
 				}.bind(this));
 		
 		

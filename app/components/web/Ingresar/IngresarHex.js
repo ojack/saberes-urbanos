@@ -24,16 +24,23 @@ var IngresarHex = React.createClass({
       width: width-2+"px", // actual width = sqrt(3)/2 * height
       height: height-2+"px"
     };
-
+    var position;
+    if(this.props.position){
+      position = this.props.position
+    } else {
+      position = {top:0, left: 0}
+    }
      var hexplaceholder ={
     width: width,
     height: height,
     margin: "0px",
-    float: "inherit",
+   // float: "inherit",
    //marginRight: "0px",
   // float: "right",
     display: "inline-block",
-    position: "relative"
+    position: "absolute",
+    top: position.top,
+    left: position.left
   }
     var style = {
       color: "#ff3366"
@@ -48,8 +55,10 @@ var IngresarHex = React.createClass({
           </div>
         );
     }
+    var id = "hi";
+    if(this.props.id) id = this.props.id;
   	return (
-  		 <div className="where " style={hexplaceholder}>   
+  		 <div id={id} style={hexplaceholder}>   
           <div className="ingresar-hex" style={hexStyle}>
             <div className="ingresar-hex" style={innerHex}>
               {this.props.hexContents}

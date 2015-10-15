@@ -50,7 +50,7 @@ var Ubicacion = React.createClass({
                      barrioIndex = i;
                     }  
                   }
-                  console.log(barrioIndex);
+                  //console.log(barrioIndex);
                }
                 this.setState({barrios: res.body, barrio: barrioIndex});
            }.bind(this));
@@ -111,8 +111,6 @@ var Ubicacion = React.createClass({
   });
   console.log(data);
 
-  var width = 245;
-  var height = 283;
  var style = {
     color: this.props.primaryColor
  }
@@ -146,23 +144,13 @@ var Ubicacion = React.createClass({
                      </div>);
 
    var hexContents = (<div><p style={style} className="ingresar-primary-heading">¿Donde estás?</p></div>);
-   var mapContents = (<IngresarMapa coords={this.props.data.coords} bounds={this.state.bounds}  direccion={this.state.direccion} width={width*1.5} height={height*1.5} updateCoords={this.updateCoords}/>);
+   var mapContents = (<IngresarMapa coords={this.props.data.coords} bounds={this.state.bounds}  direccion={this.state.direccion} width={this.props.hexWidth} height={this.props.hexHeight} updateCoords={this.updateCoords}/>);
   	return (
-  		<div className="row" >
-  			<div className="six columns">
-          <div className="ingresar-left-col">
-            <IngresarHex contents={hexContents} primaryColor={this.props.primaryColor} width={width} height={height}/>
-
-          </div>
-           
-          
-        </div>
-  			<div className="six columns">
-  				<IngresarHex contents={hexFormContents} backgroundColor="#333" width={width} height={height}/>
-  		    <IngresarHex hexContents={mapContents} noOverlay={true} backgroundColor="#333" width={width*1.5} height={height*1.5}/>
-        </div>
-        <button className="ingresar-continuar" style={buttonStyle} onClick={this.props.nextStep.bind(null, data)}> Continuar </button>
-        <h5 className="ingresar-cancelar" onClick={this.props.cancelar}> Cancelar </h5>
+  		<div className={"ingresar-component "+this.props.selectedState}>
+          <IngresarHex contents={hexContents} position={this.props.hexPositions[6]} primaryColor={this.props.primaryColor} width={this.props.hexWidth} height={this.props.hexHeight}/>
+  				<IngresarHex contents={hexFormContents} position={this.props.hexPositions[7]} backgroundColor="#333" width={this.props.hexWidth} height={this.props.hexHeight}/>
+  		    <IngresarHex hexContents={mapContents} position={this.props.hexPositions[8]} noOverlay={true} backgroundColor="#333" width={this.props.hexWidth} height={this.props.hexHeight}/>
+    
       </div>
   	);
   	// switch(this.state.step){

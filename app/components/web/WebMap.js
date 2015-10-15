@@ -5,13 +5,15 @@ import Ingresar from './Ingresar'
 import request from 'superagent';
 import AudioContextManager from './AudioContextManager';
 import SitioData from './../util/SitioData';
+import WordCloud from './WordCloud'
+
 var ReactScriptLoaderMixin = require('react-script-loader').ReactScriptLoaderMixin;
 
 var WebMap = React.createClass({
   mixins: [ReactScriptLoaderMixin],
 getInitialState(){
 	
-		return ({bounds: null, mapLoaded: false, scriptLoaded: false, sitios: null, color: "#ff3366", categorias: null, outline: null});
+		return ({bounds: null, mapLoaded: false, scriptLoaded: false, words: [], sitios: null, color: "#ff3366", categorias: null, outline: null});
 },
 getScriptURL: function() {
         return 'https://api.tiles.mapbox.com/mapbox-gl-js/v0.10.0/mapbox-gl.js';
@@ -43,12 +45,19 @@ onMapMove(){
 		this.setState({bounds: bounds});
 	},
   setOutline(outlineJson){
-    console.log("boundary is ");
-    console.log(outlineJson);
+    //console.log("boundary is ");
+    //console.log(outlineJson);
     this.setState({outline: outlineJson});
   },
   searchSitios(query){
+    console.log(query);
+    this.sitioData.searchString(query);
    //
+  },
+  updateWordCloud(){
+    var words = this.sitioData.getWords();
+   // console.log(words);
+    this.setState({words: words});
   },
   getCategoria(query){
     //
@@ -74,7 +83,7 @@ onMapMove(){
   render() {
   	var mapElements = [];
     if(this.state.scriptLoaded==true && this.state.sitios!=null){
-      mapElements.push( <BaseMap bounds={this.state.bounds} onMapMove={this.onMapMove} outline={this.state.outline} audioContext={this.audioContext} mapLoaded={this.state.mapLoaded} sitioData={this.sitioData} onMapLoaded={this.showElements}/>);
+      mapElements.push( <BaseMap bounds={this.state.bounds} onMapMove={this.onMapMove} onMoveEnd={this.updateWordCloud} outline={this.state.outline} audioContext={this.audioContext} mapLoaded={this.state.mapLoaded} sitioData={this.sitioData} onMapLoaded={this.showElements}/>);
     }
   	if(this.state.mapLoaded){
   		mapElements.push(<Navigation setBounds={this.setBounds} setOutline={this.setOutline} categorias={this.state.categorias} searchSitios={this.searchSitios} getCategoria={this.getCategoria} color={this.state.color}/>);
@@ -89,6 +98,7 @@ onMapMove(){
   	  return(<div>
   	  		
   	  			{mapElements}
+            <WordCloud words={this.state.words}/>
   	  		</div>)
    	}
   
