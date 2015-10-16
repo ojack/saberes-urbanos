@@ -5582,7 +5582,7 @@ var AudioProcessing = (function () {
     }).bind(this);
     request.send();
 
-    console.log(url);
+    // console.log(url);
     //  var input = context.createMediaStreamSource(stream);
 
     // var analyser = context.createAnalyser();
@@ -5685,27 +5685,38 @@ var CanvasHex = (function () {
 
     var canvas = document.createElement('canvas');
     this.ctx = canvas.getContext('2d');
+
     canvas.width = rad * 4;
     canvas.height = rad * 4;
+    if (imgSrc) {
+      var img = new Image();
 
-    var img = new Image();
+      img.onload = (function () {
+        this.ctx.drawImage(img, 0, 0);
+        console.log("img loaded");
 
-    img.onload = (function () {
-      this.ctx.drawImage(img, 0, 0);
-      console.log("img loaded");
-
-      this.ctx.restore();
-      //callback(canvas);
-    }).bind(this);
-    img.src = imgSrc;
-    console.log(img);
-    this.rad = rad;
-    //this.ctx.fillStyle ="#f36";
-    this.ctx.save();
-    this.ctx.beginPath();
-    this.drawHex();
-    this.ctx.closePath();
-    this.ctx.clip();
+        this.ctx.restore();
+        //callback(canvas);
+      }).bind(this);
+      img.src = imgSrc;
+      console.log(img);
+      this.rad = rad;
+      // this.ctx.globalAlpha = 0.5
+      //this.ctx.fillStyle ="#f36";
+      this.ctx.save();
+      this.ctx.beginPath();
+      this.drawHex();
+      this.ctx.closePath();
+      this.ctx.clip();
+    } else {
+      this.rad = rad;
+      this.ctx.fillStyle = "#f36";
+      this.ctx.globalAlpha = 0.5;
+      this.ctx.beginPath();
+      this.drawHex();
+      this.ctx.closePath();
+      this.ctx.fill();
+    }
     this.canvas = canvas;
     //this.ctx.fill();
   }
@@ -6843,7 +6854,7 @@ var AudioContextManager = (function () {
     this.gain = this.context.createGain();
     this.sounds = {};
     this.gain.connect(this.context.destination);
-    // this.mute();
+    this.mute();
     this.currSounds = [];
   }
 
@@ -6980,6 +6991,15 @@ function drawHex(ctx, coords, rad) {
 	//ctx.fillRect(Math.floor(coords.x)-rad/2, Math.floor(coords.y)-rad/2,rad, rad);
 }
 
+function drawHalo(ctx, inner, mag, levels, coords) {
+	for (var i = 0; i < levels; i++) {
+		ctx.beginPath();
+		drawHex(ctx, coords, inner + mag * (i + 1));
+		ctx.closePath();
+		ctx.stroke();
+	}
+}
+
 var BaseMap = _react2['default'].createClass({
 	displayName: 'BaseMap',
 
@@ -7021,7 +7041,7 @@ var BaseMap = _react2['default'].createClass({
 	},
 	renderCanvas: function renderCanvas() {
 		this.ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
-		this.ctx.drawImage(this.hex.canvas, 0, 0);
+
 		var rad = 8;
 		var outerRad;
 		for (var i = 0; i < this.props.sitioData.currentSitios.length; i++) {
@@ -7036,21 +7056,34 @@ var BaseMap = _react2['default'].createClass({
 			//this.ctx.fillStyle = "#FF3366";
 			//this.ctx.fillStyle = "#000";
 			if (obj.properties.highlighted) {
+				mult = 3;
 				var hex;
 				if (obj.properties.canvasHex) {
 					hex = obj.properties.canvasHex;
 				} else {
-					console.log(obj.properties);
+					//console.log(obj.properties.fotoSmall);
+					var url = obj.properties.fotoSmall;
+					// var url = "https://encrypted-tbn2.gstatic.com/images?q=tbn:ANd9GcRSrrglfsI5q0J9bx2gAOEa5dI2dQDSEGhuKaV-u5UxLnhrmuvE";
+					hex = new _utilCanvasHex2['default'](rad * mult, url, obj.properties.color);
+					obj.properties.canvasHex = hex;
 				}
-				mult = 3;
-			}
-			outerRad = rad * mult + 3;
-			this.ctx.fillStyle = obj.properties.color;
-			this.ctx.beginPath();
+				this.ctx.drawImage(hex.canvas, obj.properties.screenCoords.x - rad * mult, obj.properties.screenCoords.y - rad * mult);
+				var opacity = 0.4;
+				console.log(obj.properties.color);
+				this.ctx.strokeStyle = "rgba(255, 51, 102, " + opacity + ")";
+				this.ctx.strokeStyle = obj.properties.color;
+				drawHalo(this.ctx, rad * mult, 20, 6, obj.properties.screenCoords);
+			} else {
+				this.ctx.fillStyle = obj.properties.color;
+				this.ctx.beginPath();
 
-			drawHex(this.ctx, obj.properties.screenCoords, rad * mult);
-			this.ctx.closePath();
-			this.ctx.fill();
+				drawHex(this.ctx, obj.properties.screenCoords, rad * mult);
+				this.ctx.closePath();
+				this.ctx.fill();
+			}
+
+			outerRad = rad * mult + 3 * mult;
+
 			if (obj.properties.hasSound) {
 
 				//console.log(this.props.audioContext);
@@ -7058,32 +7091,33 @@ var BaseMap = _react2['default'].createClass({
 				vol = this.props.audioContext.getVolume(obj.properties.tempId);
 				//console.log(vol);
 				outerRad = outerRad + vol;
+
 				var opacity = 0.7 * (1 - vol / 100);
+				drawHalo(this.ctx, rad, vol * 0.8, 3, obj.properties.screenCoords);
+				// this.ctx.strokeStyle = "rgba(255, 51, 102, "+ opacity+")";
+				// //this.ctx.strokeStyle = "#FF3366";
+				// this.ctx.beginPath();
+				// drawHex(this.ctx, obj.properties.screenCoords, outerRad);
+				// this.ctx.closePath();
+				// this.ctx.stroke();
 
-				this.ctx.strokeStyle = "rgba(255, 51, 102, " + opacity + ")";
-				//this.ctx.strokeStyle = "#FF3366";
-				this.ctx.beginPath();
-				drawHex(this.ctx, obj.properties.screenCoords, outerRad);
-				this.ctx.closePath();
-				this.ctx.stroke();
-
-				this.ctx.beginPath();
-				drawHex(this.ctx, obj.properties.screenCoords, outerRad - vol / 3);
-				this.ctx.closePath();
-				this.ctx.stroke();
-				this.ctx.beginPath();
-				drawHex(this.ctx, obj.properties.screenCoords, outerRad - vol * 2 / 3);
-				this.ctx.closePath();
-				this.ctx.stroke();
+				// this.ctx.beginPath();
+				// drawHex(this.ctx, obj.properties.screenCoords, outerRad-vol/3);
+				// this.ctx.closePath();
+				// this.ctx.stroke();
+				// this.ctx.beginPath();
+				// drawHex(this.ctx, obj.properties.screenCoords, outerRad-vol*2/3);
+				// this.ctx.closePath();
+				// this.ctx.stroke();
 			} else {
-				var opacity = 0.5 * (1 - vol / 100);
-				this.ctx.strokeStyle = "rgba(255, 51, 102, " + opacity + ")";
-				//this.ctx.strokeStyle = "#FF3366";
-				this.ctx.beginPath();
-				drawHex(this.ctx, obj.properties.screenCoords, outerRad);
-				this.ctx.closePath();
-				this.ctx.stroke();
-			}
+					var opacity = 0.5 * (1 - vol / 100);
+					this.ctx.strokeStyle = "rgba(255, 51, 102, " + opacity + ")";
+					//this.ctx.strokeStyle = "#FF3366";
+					this.ctx.beginPath();
+					drawHex(this.ctx, obj.properties.screenCoords, outerRad);
+					this.ctx.closePath();
+					this.ctx.stroke();
+				}
 
 			//this.ctx.fillRect(i*10, i*10,8, 8);
 			//this.ctx.fillRect(100,100, 8, 8);
@@ -7163,6 +7197,7 @@ var BaseMap = _react2['default'].createClass({
 						//for(var i )
 						console.log(e.point);
 						console.log(e.lngLat);
+						console.log(features[0].properties);
 						this.setState({ selected: features[0].properties, coords: { lat: e.lngLat.lat, lng: e.lngLat.lng } });
 						this.map.flyTo({ center: e.lngLat, zoom: 16, pitch: 100 });
 					} else {
@@ -7189,8 +7224,7 @@ var BaseMap = _react2['default'].createClass({
 	componentDidMount: function componentDidMount() {
 		console.log("calling component mount");
 		console.log(this.props);
-		var url = "https://encrypted-tbn2.gstatic.com/images?q=tbn:ANd9GcRSrrglfsI5q0J9bx2gAOEa5dI2dQDSEGhuKaV-u5UxLnhrmuvE";
-		this.hex = new _utilCanvasHex2['default'](100, url);
+
 		mapboxgl.accessToken = 'pk.eyJ1Ijoib2oiLCJhIjoiSEw0cDJaNCJ9.9ffK1AU2O26zvS5Zsa6eqw';
 		this.map = new mapboxgl.Map({
 			container: 'map-fullscreen', // container id

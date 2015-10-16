@@ -54,7 +54,7 @@ this.panner = panner;
   }.bind(this);
   request.send();
    
-    console.log(url);
+   // console.log(url);
     //  var input = context.createMediaStreamSource(stream);
    
 

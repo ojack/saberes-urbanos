@@ -5,9 +5,10 @@ class CanvasHex {
   constructor(rad, imgSrc){
     var canvas = document.createElement('canvas');
      this.ctx = canvas.getContext('2d');
+
     canvas.width = rad*4;
     canvas.height = rad*4;
-   
+   if(imgSrc){
     var img = new Image();
     
     img.onload = function(){
@@ -20,13 +21,24 @@ class CanvasHex {
     img.src = imgSrc;
     console.log(img);
     this.rad = rad;
+   // this.ctx.globalAlpha = 0.5
     //this.ctx.fillStyle ="#f36";
     this.ctx.save();
     this.ctx.beginPath();
     this.drawHex();
     this.ctx.closePath();
     this.ctx.clip();
-    this.canvas = canvas;
+    
+  } else {
+    this.rad = rad;
+    this.ctx.fillStyle ="#f36";
+   this.ctx.globalAlpha = 0.5
+    this.ctx.beginPath();
+    this.drawHex();
+    this.ctx.closePath();
+    this.ctx.fill();
+  }
+  this.canvas = canvas;
       //this.ctx.fill();
   }
  

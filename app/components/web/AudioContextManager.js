@@ -24,7 +24,7 @@ class AudioContextManager {
     this.gain = this.context.createGain();
     this.sounds = {};
     this.gain.connect(this.context.destination);
-   // this.mute();
+    this.mute();
     this.currSounds = [];
   }
   /*loads sound from url and initializes audio processing object*/

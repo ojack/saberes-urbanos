@@ -22,6 +22,15 @@ function drawHex(ctx, coords, rad){
 
 }
 
+function drawHalo(ctx, inner, mag, levels, coords){
+		for(var i = 0; i < levels; i++){
+			ctx.beginPath();
+			drawHex(ctx, coords,inner+mag*(i+1));
+			ctx.closePath();
+			ctx.stroke();
+		}
+}
+
 var BaseMap = React.createClass({
 	
 	getInitialState(){
@@ -63,7 +72,7 @@ var BaseMap = React.createClass({
 	},
 	renderCanvas(){
 		this.ctx.clearRect(0,0, window.innerWidth, window.innerHeight);
-		this.ctx.drawImage(this.hex.canvas, 0, 0);
+		
 		var rad = 8;
 		var outerRad;
 		for(var i = 0; i < this.props.sitioData.currentSitios.length; i++){
@@ -79,21 +88,34 @@ var BaseMap = React.createClass({
 			//this.ctx.fillStyle = "#FF3366";
 			//this.ctx.fillStyle = "#000";
 			if(obj.properties.highlighted){
+				mult=3;
 				var hex;
 				if(obj.properties.canvasHex){
 					hex = obj.properties.canvasHex;
 				} else {
-					console.log(obj.properties);
+					//console.log(obj.properties.fotoSmall);
+					var url = obj.properties.fotoSmall;
+					// var url = "https://encrypted-tbn2.gstatic.com/images?q=tbn:ANd9GcRSrrglfsI5q0J9bx2gAOEa5dI2dQDSEGhuKaV-u5UxLnhrmuvE";
+		 			hex = new CanvasHex(rad*mult, url, obj.properties.color);
+		 			obj.properties.canvasHex = hex;
 				}
-				mult=3;
-			}
-			outerRad = rad*mult + 3;
-			this.ctx.fillStyle = obj.properties.color;
+				this.ctx.drawImage(hex.canvas, obj.properties.screenCoords.x-rad*mult, obj.properties.screenCoords.y-rad*mult);
+				var opacity = 0.4;
+				console.log(obj.properties.color);
+				this.ctx.strokeStyle = "rgba(255, 51, 102, "+ opacity+")";
+				this.ctx.strokeStyle = obj.properties.color;
+				drawHalo(this.ctx, rad*mult, 20, 6, obj.properties.screenCoords);
+			} else {
+				this.ctx.fillStyle = obj.properties.color;
 			this.ctx.beginPath();
 			
 			drawHex(this.ctx, obj.properties.screenCoords, rad*mult);
 			this.ctx.closePath();
 			this.ctx.fill();
+			}
+
+			outerRad = rad*mult + 3*mult;
+			
 			if(obj.properties.hasSound){
 				
 				//console.log(this.props.audioContext);
@@ -101,23 +123,24 @@ var BaseMap = React.createClass({
 				vol = this.props.audioContext.getVolume(obj.properties.tempId);
 				//console.log(vol);
 				outerRad = outerRad + vol;
+
 				var opacity = 0.7*(1-vol/100);
+				drawHalo(this.ctx, rad, vol*0.8, 3, obj.properties.screenCoords);
+			// this.ctx.strokeStyle = "rgba(255, 51, 102, "+ opacity+")";
+			// //this.ctx.strokeStyle = "#FF3366";
+			// this.ctx.beginPath();
+			// drawHex(this.ctx, obj.properties.screenCoords, outerRad);
+			// this.ctx.closePath();
+			// this.ctx.stroke();
 
-			this.ctx.strokeStyle = "rgba(255, 51, 102, "+ opacity+")";
-			//this.ctx.strokeStyle = "#FF3366";
-			this.ctx.beginPath();
-			drawHex(this.ctx, obj.properties.screenCoords, outerRad);
-			this.ctx.closePath();
-			this.ctx.stroke();
-
-			this.ctx.beginPath();
-			drawHex(this.ctx, obj.properties.screenCoords, outerRad-vol/3);
-			this.ctx.closePath();
-			this.ctx.stroke();
-			this.ctx.beginPath();
-			drawHex(this.ctx, obj.properties.screenCoords, outerRad-vol*2/3);
-			this.ctx.closePath();
-			this.ctx.stroke();
+			// this.ctx.beginPath();
+			// drawHex(this.ctx, obj.properties.screenCoords, outerRad-vol/3);
+			// this.ctx.closePath();
+			// this.ctx.stroke();
+			// this.ctx.beginPath();
+			// drawHex(this.ctx, obj.properties.screenCoords, outerRad-vol*2/3);
+			// this.ctx.closePath();
+			// this.ctx.stroke();
 			} else {
 				var opacity = 0.5*(1-vol/100);
 			this.ctx.strokeStyle = "rgba(255, 51, 102, "+ opacity+")";
@@ -209,6 +232,7 @@ var BaseMap = React.createClass({
 			          	//for(var i )
 			         	console.log(e.point);
 			         	console.log(e.lngLat);
+			         	console.log(features[0].properties);
 			         	this.setState({selected: features[0].properties, coords: {lat: e.lngLat.lat, lng: e.lngLat.lng}});
 			         	this.map.flyTo({center: e.lngLat, zoom: 16, pitch: 100});
 
@@ -241,8 +265,7 @@ var BaseMap = React.createClass({
 	componentDidMount(){
 		console.log("calling component mount");
 		console.log(this.props);
-		 var url = "https://encrypted-tbn2.gstatic.com/images?q=tbn:ANd9GcRSrrglfsI5q0J9bx2gAOEa5dI2dQDSEGhuKaV-u5UxLnhrmuvE";
-		 this.hex = new CanvasHex(100, url);
+		
 		mapboxgl.accessToken = 'pk.eyJ1Ijoib2oiLCJhIjoiSEw0cDJaNCJ9.9ffK1AU2O26zvS5Zsa6eqw';
 		this.map = new mapboxgl.Map({
 		  container: 'map-fullscreen', // container id
